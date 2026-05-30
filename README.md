@@ -54,6 +54,27 @@ normalized text
 joint loss = cws + **α · pos** + β · ner;默认 α=0.5 时 POS 权重只占 1.6% → 学不到。
 **α=2** 让 POS +0.02 持平 MacBERT MT。
 
+## Related Projects (ecosystem)
+
+```
+PieceTokenizer  ── 基础 SentencePiece-based char/BPE tokenizer
+       │
+       ├── Summer       Qwen3 ReTok(把 Qwen3 BBPE 词表换成 piece 词表)
+       │     │
+       │     └── Interpreter  SOTA 中英翻译 model(承接 Summer)
+       │
+       ├── BERTc(本仓)  RoBERTa-style 中文 BERT 预训练 + PD-1998 CWS/POS/NER fine-tune
+       │     ↑↓ 互补
+       └── Wapic        独立 C++ CRF 中文分词工具
+             ├→ 给 BERTc 提供 WWM 切词工具(pretokenize_v6_anneal.py 用)
+             └← 接受 BERTc fine-tuned model 的蒸馏语料(扩充 Wapic 训练数据)
+```
+
+依赖关系:
+- **PieceTokenizer** 是所有 4 个项目的基础 tokenizer 依赖
+- **Summer → Interpreter** 是 ReTok → 下游翻译的接力
+- **BERTc ↔ Wapic** 互补:工具(Wapic→BERTc)+ 蒸馏数据(BERTc→Wapic)
+
 ## License
 
 Apache 2.0
