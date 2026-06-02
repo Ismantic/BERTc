@@ -8,7 +8,7 @@ import sys
 import torch
 import torch.nn.functional as F
 
-sys.path.insert(0, "/home/tfbao/Shiyu/Summer/BERT/NLP_BERT_CRF")
+sys.path.insert(0, "/home/tfbao/Shiyu/BERTc/finetune/NLP_BERT_CRF")
 sys.path.insert(0, "/home/tfbao/Shiyu/BERTc/csc/train")
 from piece_tokenizer_adapter import PieceTokenizerAdapter
 from train_csc import BERTcForCSC, CharToId

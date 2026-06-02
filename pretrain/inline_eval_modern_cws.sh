@@ -14,8 +14,8 @@ echo "[modern_eval] $(date)  ckpt=$CKPT  step=$STEP"
 # 限制单卡 fine-tune 跑得快(用 50K train + 2K dev,1ep,batch 64)
 $PY -u $SCRIPT \
     --ckpt "$CKPT" \
-    --train_jsonl /home/tfbao/Shiyu/Summer/BERT/NLP_BERT_CRF/data/cws.pd98.clean.jsonl \
-    --dev_jsonl /home/tfbao/Shiyu/Summer/BERT/NLP_BERT_CRF/data/cws_dev.pd98.clean.jsonl \
+    --train_jsonl /home/tfbao/Shiyu/BERTc/finetune/NLP_BERT_CRF/data/cws.pd98.clean.jsonl \
+    --dev_jsonl /home/tfbao/Shiyu/BERTc/finetune/NLP_BERT_CRF/data/cws_dev.pd98.clean.jsonl \
     --track_tsv "$TRACK" \
     --max_train 50000 --max_dev 2000 \
     --epochs 1 --batch_size 64 --lr 5e-5 || {

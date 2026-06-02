@@ -226,7 +226,7 @@ def main():
     ap.add_argument("--wapic_model",
                     default="/home/tfbao/Shiyu/Wapic/data/wapic-20260602-h19_1-full.wac")
     ap.add_argument("--piece_model",
-                    default="/home/tfbao/Shiyu/Summer/BERT/bert_train_v6_mid/piece.model")
+                    default="/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/tokenizer/piece.model")
     # output
     ap.add_argument("--output",
                     default="/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/data/train_modern.pt")

@@ -7,7 +7,7 @@
 
 用法:
   python train_csc_hf.py \\
-      --backbone_path /home/tfbao/Shiyu/Summer/BERT/NLP_BERT_CRF/roberta-wwm-ext \\
+      --backbone_path /home/tfbao/Shiyu/BERTc/finetune/NLP_BERT_CRF/roberta-wwm-ext \\
       --output_dir /home/tfbao/Shiyu/BERTc/csc/output_roberta_csc_v1 \\
       --epochs 10 --batch_size 32 --lr 5e-5
 """

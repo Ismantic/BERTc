@@ -17,7 +17,7 @@
 
 用法:
   python train_csc.py \\
-      --backbone_path /home/tfbao/Shiyu/Summer/BERT/bert_train_v7_mid \\
+      --backbone_path /home/tfbao/Shiyu/BERTc/finetune/backbones/bert_train_v7_mid \\
       --output_dir /home/tfbao/Shiyu/BERTc/csc/output_v7_csc_v1 \\
       --epochs 5 --batch_size 64 --lr 5e-5
 """
@@ -36,7 +36,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, Dataset
 from transformers import BertModel, get_linear_schedule_with_warmup
 
-sys.path.insert(0, "/home/tfbao/Shiyu/Summer/BERT/NLP_BERT_CRF")
+sys.path.insert(0, "/home/tfbao/Shiyu/BERTc/finetune/NLP_BERT_CRF")
 from piece_tokenizer_adapter import PieceTokenizerAdapter
 
 

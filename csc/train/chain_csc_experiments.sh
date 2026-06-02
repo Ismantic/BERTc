@@ -24,7 +24,7 @@ OUT=$CSC/output_roberta_csc_v3
 echo "=== START v3 RoBERTa-wwm-ext (10ep batch32) $(date) ===" | tee -a $LOG
 mkdir -p $OUT
 $PY -u $CSC/train/train_csc_hf.py \
-    --backbone_path /home/tfbao/Shiyu/Summer/BERT/NLP_BERT_CRF/roberta-wwm-ext \
+    --backbone_path /home/tfbao/Shiyu/BERTc/finetune/NLP_BERT_CRF/roberta-wwm-ext \
     --train_pkl $TRAIN_PKL \
     --output_dir $OUT \
     --epochs 10 --batch_size 32 --lr 5e-5 \
@@ -40,7 +40,7 @@ OUT=$CSC/output_v7_csc_v4_batch64_10ep
 echo "=== START v4 BERTc batch64 10ep $(date) ===" | tee -a $LOG
 mkdir -p $OUT
 $PY -u $CSC/train/train_csc.py \
-    --backbone_path /home/tfbao/Shiyu/Summer/BERT/bert_train_v7_mid \
+    --backbone_path /home/tfbao/Shiyu/BERTc/finetune/backbones/bert_train_v7_mid \
     --train_pkl $TRAIN_PKL \
     --output_dir $OUT \
     --epochs 10 --batch_size 64 --lr 5e-5 \
@@ -56,7 +56,7 @@ OUT=$CSC/output_v7_csc_v5_det05
 echo "=== START v5 BERTc det_weight=0.5 batch64 5ep $(date) ===" | tee -a $LOG
 mkdir -p $OUT
 $PY -u $CSC/train/train_csc.py \
-    --backbone_path /home/tfbao/Shiyu/Summer/BERT/bert_train_v7_mid \
+    --backbone_path /home/tfbao/Shiyu/BERTc/finetune/backbones/bert_train_v7_mid \
     --train_pkl $TRAIN_PKL \
     --output_dir $OUT \
     --epochs 5 --batch_size 64 --lr 5e-5 \
@@ -72,7 +72,7 @@ OUT=$CSC/output_macbert_large_csc_v6
 echo "=== START v6 MacBERT-large 5ep batch16 $(date) ===" | tee -a $LOG
 mkdir -p $OUT
 $PY -u $CSC/train/train_csc_hf.py \
-    --backbone_path /home/tfbao/Shiyu/Summer/BERT/NLP_BERT_CRF/macbert-large \
+    --backbone_path /home/tfbao/Shiyu/BERTc/finetune/NLP_BERT_CRF/macbert-large \
     --train_pkl $TRAIN_PKL \
     --output_dir $OUT \
     --epochs 5 --batch_size 16 --lr 3e-5 \

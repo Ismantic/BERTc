@@ -29,7 +29,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from model import ModernBertConfig, ModernBertModel
 
 # 复用 NLP_BERT_CRF 的 piece tokenizer adapter
-sys.path.insert(0, "/home/tfbao/Shiyu/Summer/BERT/NLP_BERT_CRF")
+sys.path.insert(0, "/home/tfbao/Shiyu/BERTc/finetune/NLP_BERT_CRF")
 from piece_tokenizer_adapter import PieceTokenizerAdapter
 
 
@@ -211,9 +211,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ckpt", required=True, help="checkpoint-NNNNN dir")
     ap.add_argument("--train_jsonl",
-                    default="/home/tfbao/Shiyu/Summer/BERT/NLP_BERT_CRF/data/cws.jsonl")
+                    default="/home/tfbao/Shiyu/BERTc/finetune/NLP_BERT_CRF/data/cws.jsonl")
     ap.add_argument("--dev_jsonl",
-                    default="/home/tfbao/Shiyu/Summer/BERT/NLP_BERT_CRF/data/cws_dev.jsonl")
+                    default="/home/tfbao/Shiyu/BERTc/finetune/NLP_BERT_CRF/data/cws_dev.jsonl")
     ap.add_argument("--track_tsv", default="/home/tfbao/Shiyu/BERTc/pretrain/inline_track.tsv")
     ap.add_argument("--max_train", type=int, default=50000)
     ap.add_argument("--max_dev", type=int, default=2000)
@@ -226,8 +226,7 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # tokenizer:用 Modern BERTc backbone 同一个 piece tokenizer
-    # (v6 piece.model 路径写死,Modern BERTc 用的同一个)
-    piece_path = "/home/tfbao/Shiyu/Summer/BERT/bert_train_v6_mid"
+    piece_path = "/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/tokenizer"
     tok = PieceTokenizerAdapter(piece_path)
     char_to_id = CharToId(tok)
     pad_id = tok.pad_token_id

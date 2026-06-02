@@ -27,7 +27,7 @@ from transformers import get_linear_schedule_with_warmup
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from model import ModernBertConfig, ModernBertModel
 
-sys.path.insert(0, "/home/tfbao/Shiyu/Summer/BERT/NLP_BERT_CRF")
+sys.path.insert(0, "/home/tfbao/Shiyu/BERTc/finetune/NLP_BERT_CRF")
 from piece_tokenizer_adapter import PieceTokenizerAdapter
 
 
@@ -220,7 +220,7 @@ def main():
     args = ap.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    tok = PieceTokenizerAdapter("/home/tfbao/Shiyu/Summer/BERT/bert_train_v6_mid")
+    tok = PieceTokenizerAdapter("/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/tokenizer")
     char_to_id = CharToId(tok)
     pad_id = tok.pad_token_id
     vocab_size = tok.vocab_size
