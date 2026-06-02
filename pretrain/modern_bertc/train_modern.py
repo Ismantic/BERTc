@@ -284,8 +284,9 @@ def main():
                    help="维护 EMA shadow weights,save 时存进 ckpt(ema_state)。eval 优先用")
     p.add_argument("--no_ema", dest="use_ema", action="store_false",
                    help="关掉 EMA(默认开)")
-    p.add_argument("--ema_decay", type=float, default=0.9999,
-                   help="EMA decay(0.9999 半衰期 ~7K step,适合 100K+ 训练)")
+    p.add_argument("--ema_decay", type=float, default=0.999,
+                   help="EMA decay(0.999 半衰期 ~700 step,适合 7K-30K step 训练;"
+                        "长训练用 0.9999)")
     # inline eval hook
     # 注:flex_attention 在 model.py module-level 已经 torch.compile wrap,
     # 无需 CLI flag

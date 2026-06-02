@@ -25,15 +25,16 @@ PY=/home/tfbao/.venv/bin/python
 
 mkdir -p "$OUTPUT"
 
-# eff_batch = 32 × 8 = 256
-# 14.6B / (256 × 512) = ~111k optim steps
-# warmup ~3% → 3000 steps
+# Cramming-aligned: eff_batch 4096(跟 Cramming/ModernBERT/RoBERTa 同 order)
+# eff = 32 × 128 = 4096
+# 14.6B / (4096 × 512) = ~7000 optim steps
+# warmup 6%(Cramming Section 4.3 推荐,大 batch 需要更多 warmup)→ 420 steps
 BATCH=32
-ACCUM=8
-MAX_STEPS=111000
-WARMUP=3000
-SAVE_STEPS=20000  # 6 个 ckpt(20k/40k/60k/80k/100k + final)— inline_eval 总耗时 ≤2h
-LOG_STEPS=50
+ACCUM=128
+MAX_STEPS=7000
+WARMUP=420
+SAVE_STEPS=1500  # 5 个 ckpt(1.5k/3k/4.5k/6k + final)— inline_eval 总耗时 ≤2h
+LOG_STEPS=10     # 大 batch 下 step 少,频繁 log 才看得清曲线
 
 echo "=== Modern BERTc v3 训练 $(date) ==="
 echo "  data: $DATA"
