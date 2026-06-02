@@ -349,9 +349,15 @@ def main():
         word_ids_path=args.word_ids_data if args.wwm else None,
         seg_ids_path=seg_path if use_seg else None,
     )
+    # num_workers=4 + prefetch 让 disk read 并行,GPU 不等数据
+    # multiprocessing_context='fork' 避免 spawn 时 pickle memmap 失败(Linux 专属)
+    # persistent_workers 避免每 epoch 重 spawn worker
+    import multiprocessing as _mp
     loader = DataLoader(ds, batch_size=args.batch_size, shuffle=True,
-                        num_workers=0, pin_memory=True, drop_last=True,
-                        collate_fn=collate_fn)
+                        num_workers=4, pin_memory=True, drop_last=True,
+                        collate_fn=collate_fn,
+                        prefetch_factor=4, persistent_workers=True,
+                        multiprocessing_context=_mp.get_context('fork'))
 
     # 优化器:StableAdamW
     from optimi import StableAdamW
