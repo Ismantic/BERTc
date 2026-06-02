@@ -5,8 +5,10 @@ output_*/
 logs/
 *.pt
 *.pt.wid
+*.pt.seg
 *.pt.meta
 *.pt.wid.meta
+*.pt.seg.meta
 *.log
 *.parquet
 *.wac
@@ -36,3 +38,11 @@ __pycache__/
 # Local
 experiments.tsv
 .claude/
+
+# SOTA checkpoints — large binary, not committed but preserved on disk
+finetune/sota/*.pt
+
+# CSC baseline 模型 (大文件)
+csc/baseline/macbert4csc_ckpt
+csc/data/raw/*.pt
+csc/data/raw/*.bin
