@@ -302,25 +302,25 @@ class ModernBertModel(nn.Module):
 # ============ MLM head(tied embedding)============
 
 class ModernBertForMLM(nn.Module):
+    """MLM head 简化版(Cramming Section 4.2 推荐):
+       - 无 nonlinear head(去 Dense + LN + GeLU)— "without ill effect"
+       - 无 decoder bias(去 head_bias)— "drop the decoder bias"
+       - 仅 tied embedding projection:logits = h @ embed.weight.T
+       - final LayerNorm 已经在 bert.final_norm 提供,这里不需重复
+       省参数 ~0.6M,forward 略快。"""
     def __init__(self, config: ModernBertConfig):
         super().__init__()
         self.config = config
         self.bert = ModernBertModel(config)
-        # MLM transformer head: Dense + LayerNorm(no bias) + GeLU,然后 tied vocab projection
-        self.head_dense = nn.Linear(config.hidden_size, config.hidden_size, bias=False)
-        self.head_norm = LayerNormNoBias(config.hidden_size, eps=config.layer_norm_eps)
-        # logits bias(per-vocab)
-        self.head_bias = nn.Parameter(torch.zeros(config.vocab_size))
 
     def get_input_embeddings(self):
         return self.bert.embed
 
     def forward(self, input_ids, seg_ids=None, attention_mask=None, labels=None):
         h = self.bert(input_ids, seg_ids=seg_ids,
-                       attention_mask=attention_mask)            # [B, L, H]
-        h = self.head_norm(F.gelu(self.head_dense(h)))           # MLM head
-        # tied:logits = h @ embed.weight.T + head_bias
-        logits = F.linear(h, self.bert.embed.weight, self.head_bias)
+                       attention_mask=attention_mask)        # [B, L, H],bert 内已 final_norm
+        # 直接 tied embedding projection,无 nonlinear head 也无 bias
+        logits = F.linear(h, self.bert.embed.weight)         # [B, L, V]
         loss = None
         if labels is not None:
             loss = F.cross_entropy(

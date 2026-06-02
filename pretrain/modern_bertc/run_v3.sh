@@ -69,7 +69,9 @@ cd $ROOT && $PY -u train_modern.py \
     --beta1 0.9 \
     --beta2 0.95 \
     --eps 1e-6 \
-    --max_grad_norm 1.0 \
+    --max_grad_norm 0.5 \
+    --accum_warmup_frac 1.0 \
+    --accum_min 1 \
     --mlm_low 0.15 \
     --mlm_high 0.30 \
     --mlm_warmup_frac 0.05 \
