@@ -47,7 +47,8 @@ class ModernBertCWS(nn.Module):
         # 加载 weight
         ckpt = torch.load(os.path.join(ckpt_dir, "model.pt"),
                           map_location="cpu", weights_only=False)
-        sd = ckpt["model"]
+        # 优先用 EMA shadow(更稳),回退 raw model
+        sd = ckpt.get("ema") or ckpt["model"]
         # 只取 bert.* 部分(可能含 head_*,跳过)
         bert_sd = {k[len("bert."):]: v for k, v in sd.items() if k.startswith("bert.")}
         self.bert.load_state_dict(bert_sd, strict=True)

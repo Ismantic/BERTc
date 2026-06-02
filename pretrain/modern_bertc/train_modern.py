@@ -162,6 +162,44 @@ def current_grad_accum(step: int, total_steps: int, peak: int,
     return max(min_accum, int(round(val)))
 
 
+# ============ EMA(Exponential Moving Average)============
+
+class EMA:
+    """Exponential Moving Average of model parameters。
+    每 optim.step 后 shadow = decay × shadow + (1-decay) × param
+    inline_eval / final ckpt 用 shadow weights(更稳,过滤训练噪声)。
+
+    decay=0.9999 半衰期 ~7000 step,我们 111K steps → 平滑后期 noise 但不滞后早期训练。
+    """
+    def __init__(self, model: torch.nn.Module, decay: float = 0.9999):
+        self.decay = decay
+        self.shadow: dict[str, torch.Tensor] = {}
+        for name, param in model.named_parameters():
+            if param.requires_grad:
+                # 同 device 同 dtype,免一次 copy
+                self.shadow[name] = param.data.clone().detach()
+
+    @torch.no_grad()
+    def update(self, model: torch.nn.Module):
+        for name, param in model.named_parameters():
+            if param.requires_grad:
+                self.shadow[name].mul_(self.decay).add_(param.data, alpha=1.0 - self.decay)
+
+    def state_dict(self) -> dict:
+        """返回 shadow weights(跟 model.state_dict() 同名,但仅 trainable 参数)。
+        non-trainable buffers(e.g. pos_emb.pe)从 raw model state_dict 补。
+        """
+        return dict(self.shadow)
+
+    def merged_state_dict(self, model: torch.nn.Module) -> dict:
+        """完整 state_dict:trainable 用 EMA shadow,non-trainable buffer 从 raw model 取。"""
+        raw = model.state_dict()
+        out = dict(raw)  # 默认 raw(含 buffers)
+        for name in self.shadow:
+            out[name] = self.shadow[name]
+        return out
+
+
 # ============ Optimizer 参数分组(filter_bias_norm_wd)============
 
 def make_param_groups(model: torch.nn.Module, weight_decay: float):
@@ -241,6 +279,13 @@ def main():
     # save
     p.add_argument("--save_steps", type=int, default=20000)
     p.add_argument("--logging_steps", type=int, default=50)
+    # EMA(Exponential Moving Average)— 训练末尾尤其有用
+    p.add_argument("--use_ema", action="store_true", default=True,
+                   help="维护 EMA shadow weights,save 时存进 ckpt(ema_state)。eval 优先用")
+    p.add_argument("--no_ema", dest="use_ema", action="store_false",
+                   help="关掉 EMA(默认开)")
+    p.add_argument("--ema_decay", type=float, default=0.9999,
+                   help="EMA decay(0.9999 半衰期 ~7K step,适合 100K+ 训练)")
     # inline eval hook
     # 注:flex_attention 在 model.py module-level 已经 torch.compile wrap,
     # 无需 CLI flag
@@ -321,6 +366,12 @@ def main():
     print(f"StableAdamW: lr={args.lr} betas=({args.beta1},{args.beta2}) eps={args.eps}")
     print(f"  decay params: {n_decay:,} | no-decay (bias/norm): {n_nodecay:,}")
 
+    # EMA(在 model 完全 init 之后建)
+    ema = EMA(model, decay=args.ema_decay) if args.use_ema else None
+    if ema is not None:
+        n_ema_params = sum(t.numel() for t in ema.shadow.values())
+        print(f"EMA: decay={args.ema_decay}, shadow params={n_ema_params/1e6:.1f}M")
+
     step = 0
     accum = 0
     cur_accum_target = current_grad_accum(0, args.max_steps,
@@ -375,6 +426,8 @@ def main():
                     g["lr"] = cur_lr
                 optim.step()
                 optim.zero_grad(set_to_none=True)
+                if ema is not None:
+                    ema.update(model._orig_mod if hasattr(model, "_orig_mod") else model)
                 step += 1
                 accum = 0
                 # 决定下个 grad-step 的 accum target(batch warmup)
@@ -401,11 +454,14 @@ def main():
                     save = os.path.join(args.output_dir, f"checkpoint-{step}")
                     os.makedirs(save, exist_ok=True)
                     raw = model._orig_mod if hasattr(model, "_orig_mod") else model
-                    torch.save({
+                    save_dict = {
                         "model": raw.state_dict(),
                         "config": cfg.__dict__,
                         "step": step,
-                    }, os.path.join(save, "model.pt"))
+                    }
+                    if ema is not None:
+                        save_dict["ema"] = ema.merged_state_dict(raw)
+                    torch.save(save_dict, os.path.join(save, "model.pt"))
                     import shutil
                     shutil.copy2(config_path, os.path.join(save, "config.json"))
                     shutil.copy2(os.path.join(args.output_dir, "mask_token_id.txt"),
@@ -429,8 +485,10 @@ def main():
 
     # final save
     raw = model._orig_mod if hasattr(model, "_orig_mod") else model
-    torch.save({"model": raw.state_dict(), "config": cfg.__dict__, "step": step},
-               os.path.join(args.output_dir, "model_final.pt"))
+    final_dict = {"model": raw.state_dict(), "config": cfg.__dict__, "step": step}
+    if ema is not None:
+        final_dict["ema"] = ema.merged_state_dict(raw)
+    torch.save(final_dict, os.path.join(args.output_dir, "model_final.pt"))
     print(f"\nFinal save to {args.output_dir}")
     print(f"Training complete: {step} steps in {time.time()-t0:.0f}s")
 

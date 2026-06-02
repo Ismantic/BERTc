@@ -32,7 +32,7 @@ BATCH=32
 ACCUM=8
 MAX_STEPS=111000
 WARMUP=3000
-SAVE_STEPS=10000  # 11 个 ckpt
+SAVE_STEPS=20000  # 6 个 ckpt(20k/40k/60k/80k/100k + final)— inline_eval 总耗时 ≤2h
 LOG_STEPS=50
 
 echo "=== Modern BERTc v3 训练 $(date) ==="

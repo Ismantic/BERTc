@@ -43,7 +43,8 @@ class ModernBertCSC(nn.Module):
         self.bert = ModernBertModel(cfg)
         ckpt = torch.load(os.path.join(ckpt_dir, "model.pt"),
                           map_location="cpu", weights_only=False)
-        sd = ckpt["model"]
+        # 优先用 EMA shadow,回退 raw model
+        sd = ckpt.get("ema") or ckpt["model"]
         bert_sd = {k[len("bert."):]: v for k, v in sd.items() if k.startswith("bert.")}
         self.bert.load_state_dict(bert_sd, strict=True)
         H = cfg.hidden_size
