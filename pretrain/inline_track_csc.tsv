@@ -1,0 +1,2 @@
+timestamp	step	ckpt	csc_F1	P	R	acc
+2026-06-02 16:20:26	15000	/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v1/checkpoint-15000	0.0157	0.3750	0.0080	0.4696

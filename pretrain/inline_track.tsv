@@ -1,0 +1,4 @@
+[inline_eval] FAILED on /home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v1/checkpoint-5000
+[inline_eval] FAILED on /home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v1/checkpoint-10000
+[inline_eval] FAILED on /home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v1/checkpoint-15000
+2026-06-02 16:17:26	15000	/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v1/checkpoint-15000	0.9438	0.9415	0.9460
