@@ -144,6 +144,24 @@ def damped_cosine_lr(step: int, total_steps: int, peak: float, min_lr: float,
     return mid + amp * math.cos(math.pi * (2 * n_cycles - 1) * p)
 
 
+# ============ Batch size warmup(linear ramp grad_accum)============
+
+def current_grad_accum(step: int, total_steps: int, peak: int,
+                        warmup_frac: float = 0.05, min_accum: int = 1) -> int:
+    """前 warmup_frac 比例的 step:grad_accum 从 min_accum 线性 ramp 到 peak。
+    Cramming 论文 + ModernBERT yaml 都用类似 schedule(`batch_size_warmup_tokens`)。
+    我们 grad_accum 跟 effective batch 是线性关系(batch_size 不变),所以等价 batch warmup。
+    """
+    if total_steps <= 0 or warmup_frac <= 0:
+        return peak
+    p = step / total_steps
+    if p >= warmup_frac:
+        return peak
+    t = p / warmup_frac
+    val = min_accum + (peak - min_accum) * t
+    return max(min_accum, int(round(val)))
+
+
 # ============ Optimizer 参数分组(filter_bias_norm_wd)============
 
 def make_param_groups(model: torch.nn.Module, weight_decay: float):
@@ -182,11 +200,18 @@ def main():
     p.add_argument("--layer_norm_eps", type=float, default=1e-5)
     p.add_argument("--embed_dropout", type=float, default=0.0)
     p.add_argument("--mlp_dropout", type=float, default=0.0)
-    p.add_argument("--attn_out_dropout", type=float, default=0.1)
+    p.add_argument("--attn_out_dropout", type=float, default=0.0,
+                   help="Cramming 论文 Section 4.3:short single-epoch 训练 dropout "
+                        "只减少 update 数,无 overfit 风险。默认关掉。")
     # train
     p.add_argument("--max_seq_length", type=int, default=512)
     p.add_argument("--batch_size", type=int, default=16)
-    p.add_argument("--gradient_accumulation_steps", type=int, default=8)
+    p.add_argument("--gradient_accumulation_steps", type=int, default=8,
+                   help="peak grad_accum(eff_batch = batch_size × accum)")
+    p.add_argument("--accum_warmup_frac", type=float, default=0.05,
+                   help="前 X 比例 step 线性 ramp grad_accum 1→peak(Cramming + ModernBERT 推荐)")
+    p.add_argument("--accum_min", type=int, default=1,
+                   help="ramp 起点 grad_accum(默认 1,即起步 micro-batch 等于物理 batch)")
     p.add_argument("--max_steps", type=int, default=200000)
     p.add_argument("--warmup_steps", type=int, default=2000)
     p.add_argument("--lr", type=float, default=8e-4, help="StableAdamW peak LR")
@@ -297,8 +322,13 @@ def main():
 
     step = 0
     accum = 0
+    cur_accum_target = current_grad_accum(0, args.max_steps,
+                                           peak=args.gradient_accumulation_steps,
+                                           warmup_frac=args.accum_warmup_frac,
+                                           min_accum=args.accum_min)
     t0 = time.time()
     loss_acc = 0.0
+    n_micro_acc = 0   # 累积 micro-step 数(grad accum 变化时,不能用 logging × N 算)
     correct_acc = 0
     n_masked_acc = 0
     model.train()
@@ -323,16 +353,17 @@ def main():
                     prob=cur_mlm, pad_id=cfg.pad_token_id)
 
             out = model(input_ids=masked_ids, seg_ids=segs, labels=labels)
-            loss = out["loss"] / args.gradient_accumulation_steps
+            loss = out["loss"] / cur_accum_target  # 用当前 grad-step 起点决定的 target
             loss.backward()
             with torch.no_grad():
                 preds = out["logits"].argmax(-1)
                 mask_pos = labels != -100
                 correct_acc += ((preds == labels) & mask_pos).sum().item()
                 n_masked_acc += mask_pos.sum().item()
-            loss_acc += loss.item()
+            loss_acc += loss.item() * cur_accum_target  # 还原回 full per-micro loss
+            n_micro_acc += 1
             accum += 1
-            if accum >= args.gradient_accumulation_steps:
+            if accum >= cur_accum_target:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
                 # 手动设置 LR(damped cosine)
                 cur_lr = damped_cosine_lr(step, args.max_steps, peak=args.lr,
@@ -345,15 +376,23 @@ def main():
                 optim.zero_grad(set_to_none=True)
                 step += 1
                 accum = 0
+                # 决定下个 grad-step 的 accum target(batch warmup)
+                cur_accum_target = current_grad_accum(
+                    step, args.max_steps,
+                    peak=args.gradient_accumulation_steps,
+                    warmup_frac=args.accum_warmup_frac,
+                    min_accum=args.accum_min,
+                )
 
                 if step % args.logging_steps == 0:
                     el = time.time() - t0
-                    avg_loss = loss_acc / (args.logging_steps * args.gradient_accumulation_steps)
+                    avg_loss = loss_acc / max(1, n_micro_acc)  # 每 micro-step 平均 loss
                     acc = correct_acc / max(1, n_masked_acc)
                     print(f"step {step}/{args.max_steps} | loss {avg_loss:.4f} | "
                           f"mlm_acc {acc:.4f} | lr {cur_lr:.6f} | mlm_p {cur_mlm:.3f} | "
-                          f"{el:.1f}s", flush=True)
+                          f"accum {cur_accum_target} | {el:.1f}s", flush=True)
                     loss_acc = 0.0
+                    n_micro_acc = 0
                     correct_acc = 0
                     n_masked_acc = 0
 
