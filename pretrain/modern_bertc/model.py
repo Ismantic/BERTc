@@ -1,22 +1,23 @@
-"""Modern BERTc v2 — ModernBERT release-aligned (Answer.AI 2024-12) for char-level Chinese MLM.
+"""Modern BERTc v3 — ModernBERT release-aligned + Cramming-style ScaledSinusoidal PE.
 
-完全按 release `modernbert-base-pretrain.yaml` 对齐(除 Alternating Attention):
+主要按 release `modernbert-base-pretrain.yaml` 对齐(除 Alt Attn 和 PE):
   - 架构: 22L / 768H / 1152I (GLU) / 12 heads,head_dim=64
-  - RoPE 位置编码(theta=10000),无 absolute position
+  - **ScaledSinusoidal 位置编码**(Hua et al. 2022 FLASH;Cramming 实测短 seq 比
+    RoPE 更值:计算几乎免费,RoPE 收益被 5-10% 速度损失抵消)
   - GeGLU FFN(glu + gelu)
   - LayerNorm 无 bias(eps=1e-5),非 RMSNorm
-  - pre-norm 布局 + skip_first_prenorm(第 1 层不做 pre-norm,因 embed 出来已经 norm)
-  - embed_norm(embedding 之后立刻 LayerNorm)
-  - final_norm(最后一层之后 LayerNorm 再出 head)
+  - pre-norm 布局 + skip_first_prenorm
+  - embed_norm + final_norm
   - Megatron-style init:残差层 W 缩 1/sqrt(2L)
-  - 全无 Linear bias(qkv/o/mlp_in/mlp_out)
-  - Dropout: embed=0, mlp=0, attn_out=0.1
-  - tied word embedding(input emb = MLM head)
-  - FlashAttention 2(torch.nn.functional.scaled_dot_product_attention)
+  - 全无 Linear bias
+  - Dropout: 全 0(Cramming 论据:short single-epoch 无 overfit risk)
+  - tied word embedding
+  - flex_attention compiled(支持 cross-doc 隔离 via seg_ids)
 
 不上的 ModernBERT 特性:
   - Alternating Attention(我们走全局 attention)
-  - Unpadded packing + cu_seqlens(我们 pretokenize 已经是定长 pack,padding 损失 <5%)
+  - Unpadded packing + cu_seqlens(我们定长 pack)
+  - RoPE(换 ScaledSinusoidal,见 Cramming Section 4.2)
 
 参数量(默认 22L/768H/1152I,V=12536):
   emb (tied)              : 12536 × 768  ≈ 9.6M
@@ -34,6 +35,7 @@
 """
 from dataclasses import dataclass, field
 from typing import Optional
+import math
 
 import torch
 import torch.nn as nn
@@ -62,7 +64,7 @@ class ModernBertConfig:
     max_position_embeddings: int = 1024
     pad_token_id: int = 12531
     mask_token_id: int = 12535
-    rope_theta: float = 10000.0
+    pe_theta: float = 10000.0  # ScaledSinusoidal 频率 base(Vaswani 2017 默认)
     layer_norm_eps: float = 1e-5
     initializer_range: float = 0.02
     tie_word_embeddings: bool = True
@@ -98,37 +100,34 @@ class LayerNormNoBias(nn.Module):
         return F.layer_norm(x, self.normalized_shape, self.weight, None, self.eps)
 
 
-# ============ RoPE ============
+# ============ ScaledSinusoidal Position Embedding(Hua et al. 2022 / Cramming)============
 
-def _build_rope_cache(seq_len: int, head_dim: int, theta: float, device, dtype):
-    """生成 RoPE 的 cos/sin 表 [seq_len, head_dim/2]。"""
-    inv_freq = 1.0 / (theta ** (torch.arange(0, head_dim, 2, device=device).float() / head_dim))
-    t = torch.arange(seq_len, device=device, dtype=torch.float32)
-    freqs = torch.einsum("i,j->ij", t, inv_freq)  # [seq_len, half]
-    cos = freqs.cos().to(dtype)
-    sin = freqs.sin().to(dtype)
-    return cos, sin
+class ScaledSinusoidalPE(nn.Module):
+    """Scaled sinusoidal positional embedding(Hua 2022 FLASH paper)。
 
-
-def apply_rope(q: torch.Tensor, k: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor):
-    """对 Q, K 应用旋转位置编码。
-    q, k: [B, H, L, D]
-    cos, sin: [L, D/2]
+    标准 sinusoidal:PE[pos, 2i]=sin(pos/θ^(2i/d)), PE[pos, 2i+1]=cos(...)。
+    `scale_factor` 是一个 learnable 标量,初始 1/sqrt(d)。
+    用法:embedding 之后直接 `x = embed + pos_emb(input_ids)`,跟所有层共享。
+    比 RoPE 便宜:只在 embedding 层 fire 一次,attention 里 0 开销。
     """
-    q1, q2 = q[..., ::2], q[..., 1::2]
-    k1, k2 = k[..., ::2], k[..., 1::2]
-    cos = cos[None, None, :, :]  # [1,1,L,D/2]
-    sin = sin[None, None, :, :]
-    q_rot = torch.empty_like(q)
-    k_rot = torch.empty_like(k)
-    q_rot[..., ::2] = q1 * cos - q2 * sin
-    q_rot[..., 1::2] = q1 * sin + q2 * cos
-    k_rot[..., ::2] = k1 * cos - k2 * sin
-    k_rot[..., 1::2] = k1 * sin + k2 * cos
-    return q_rot, k_rot
+    def __init__(self, embedding_dim: int, max_seq_length: int, theta: float = 10000.0):
+        super().__init__()
+        pe = torch.zeros(max_seq_length, embedding_dim)
+        position = torch.arange(0, max_seq_length, dtype=torch.float).unsqueeze(1)
+        div_term = torch.exp(
+            torch.arange(0, embedding_dim, 2).float() * (-math.log(theta) / embedding_dim)
+        )
+        pe[:, 0::2] = torch.sin(position * div_term)
+        pe[:, 1::2] = torch.cos(position * div_term)
+        pe = pe.unsqueeze(0)  # [1, L, d]
+        self.register_buffer("pe", pe, persistent=False)
+        self.scale_factor = nn.Parameter(torch.tensor([1.0 / embedding_dim ** 0.5]))
+
+    def forward(self, seq_len: int) -> torch.Tensor:
+        return self.scale_factor * self.pe[:, :seq_len, :]
 
 
-# ============ Attention(bidirectional + RoPE)============
+# ============ Attention(bidirectional,无 RoPE,位置走 ScaledSinusoidal)============
 
 class ModernBertAttention(nn.Module):
     def __init__(self, config: ModernBertConfig):
@@ -142,13 +141,14 @@ class ModernBertAttention(nn.Module):
         self.o = nn.Linear(config.hidden_size, config.hidden_size, bias=False)
         self.out_dropout = nn.Dropout(config.attn_out_dropout)
 
-    def forward(self, x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor,
+    def forward(self, x: torch.Tensor,
                 block_mask=None,
                 attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """两种 attention 模式:
-        - block_mask 非空 → flex_attention(block-diag,跨 doc 隔离用,训练时走这里)
-        - block_mask 空,attention_mask 非空 → SDPA(简单 pad mask,fine-tune 时走这里)
-        - 两者都空 → SDPA 全可见
+        """三种 attention 模式:
+        - block_mask 非空 → flex_attention(block-diag,跨 doc 隔离,训练时)
+        - block_mask 空,attention_mask 非空 → SDPA + pad mask(fine-tune)
+        - 都空 → SDPA 全可见
+        位置信息走 ScaledSinusoidal,已在 embedding 层加,attention 里无 cos/sin 计算。
         """
         B, L, H = x.shape
         qkv = self.qkv(x).reshape(B, L, 3, self.num_heads, self.head_dim)
@@ -156,8 +156,6 @@ class ModernBertAttention(nn.Module):
         q = q.transpose(1, 2)
         k = k.transpose(1, 2)
         v = v.transpose(1, 2)
-        # RoPE
-        q, k = apply_rope(q, k, cos[:L], sin[:L])
 
         if block_mask is not None:
             # flex_attention(compiled):任意 mask + flash 速度;不支持 dropout_p
@@ -207,8 +205,8 @@ class ModernBertLayer(nn.Module):
         self.norm2 = LayerNormNoBias(config.hidden_size, eps=config.layer_norm_eps)
         self.mlp = GeGLU(config)
 
-    def forward(self, x, cos, sin, block_mask=None, attention_mask=None):
-        x = x + self.attn(self.norm1(x), cos, sin, block_mask, attention_mask)
+    def forward(self, x, block_mask=None, attention_mask=None):
+        x = x + self.attn(self.norm1(x), block_mask, attention_mask)
         x = x + self.mlp(self.norm2(x))
         return x
 
@@ -221,6 +219,12 @@ class ModernBertModel(nn.Module):
         self.config = config
         self.embed = nn.Embedding(config.vocab_size, config.hidden_size,
                                    padding_idx=config.pad_token_id)
+        # ScaledSinusoidal PE(Cramming-style),加在 embedding 后
+        self.pos_emb = ScaledSinusoidalPE(
+            embedding_dim=config.hidden_size,
+            max_seq_length=config.max_position_embeddings,
+            theta=config.pe_theta,
+        )
         self.embed_norm = (LayerNormNoBias(config.hidden_size, eps=config.layer_norm_eps)
                            if config.embed_norm else nn.Identity())
         self.embed_dropout = nn.Dropout(config.embed_dropout)
@@ -230,7 +234,6 @@ class ModernBertModel(nn.Module):
         )
         self.final_norm = (LayerNormNoBias(config.hidden_size, eps=config.layer_norm_eps)
                            if config.final_norm else nn.Identity())
-        self._rope_cache = {}
 
         # init: Megatron-style 残差缩放
         self.apply(self._init_weights)
@@ -262,32 +265,23 @@ class ModernBertModel(nn.Module):
                 layer.attn.o.weight.mul_(scale)
                 layer.mlp.w_out.weight.mul_(scale)
 
-    def _get_rope(self, seq_len: int, device, dtype):
-        key = (device, dtype, seq_len)
-        if key not in self._rope_cache:
-            cos, sin = _build_rope_cache(
-                seq_len, self.config.head_dim,
-                self.config.rope_theta, device, dtype
-            )
-            self._rope_cache[key] = (cos, sin)
-        return self._rope_cache[key]
-
     def forward(self, input_ids: torch.Tensor,
                 seg_ids: Optional[torch.Tensor] = None,
                 attention_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         """seg_ids: [B, L] int32/uint8,同 doc 同 id;非空时走 flex_attention 跨 doc 隔离。
         attention_mask: [B, L] 0/1,只在 seg_ids=None 时使用(fine-tune 路径)。
+        位置信息:ScaledSinusoidal 加在 embedding 后,attention 内部无位置计算。
         """
         B, L = input_ids.shape
         x = self.embed(input_ids)
+        x = x + self.pos_emb(L).to(x.dtype)  # 加 scaled sinusoidal PE
         x = self.embed_norm(x)
         x = self.embed_dropout(x)
-        cos, sin = self._get_rope(L, x.device, x.dtype)
 
         block_mask = self._build_block_mask(seg_ids, B, L) if seg_ids is not None else None
 
         for layer in self.layers:
-            x = layer(x, cos, sin, block_mask, attention_mask)
+            x = layer(x, block_mask, attention_mask)
         x = self.final_norm(x)
         return x
 
@@ -347,7 +341,7 @@ if __name__ == "__main__":
     cfg = ModernBertConfig()
     print(f"Config: V={cfg.vocab_size} H={cfg.hidden_size} L={cfg.num_hidden_layers} "
           f"head={cfg.num_attention_heads} d={cfg.head_dim} I={cfg.intermediate_size} "
-          f"rope_theta={cfg.rope_theta} ln_eps={cfg.layer_norm_eps}")
+          f"pe_theta={cfg.pe_theta} ln_eps={cfg.layer_norm_eps}")
     print(f"embed_norm={cfg.embed_norm} skip_first_prenorm={cfg.skip_first_prenorm} "
           f"final_norm={cfg.final_norm} init={cfg.init_method}")
     print(f"dropout: embed={cfg.embed_dropout} mlp={cfg.mlp_dropout} "

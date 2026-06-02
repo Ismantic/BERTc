@@ -52,7 +52,7 @@ cd $ROOT && $PY -u train_modern.py \
     --num_heads 12 \
     --intermediate_size 1152 \
     --max_position 1024 \
-    --rope_theta 10000.0 \
+    --pe_theta 10000.0 \
     --layer_norm_eps 1e-5 \
     --embed_dropout 0.0 \
     --mlp_dropout 0.0 \
