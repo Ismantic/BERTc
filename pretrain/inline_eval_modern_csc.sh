@@ -14,7 +14,7 @@ $PY -u $SCRIPT \
     --ckpt "$CKPT" \
     --track_tsv "$TRACK" \
     --max_train 50000 \
-    --epochs 5 --batch_size 64 --lr 5e-5 || {
+    --epochs 5 --batch_size 32 --lr 5e-5 || {
         echo "[modern_csc_eval] FAILED on $CKPT" | tee -a "$TRACK"
         exit 0
     }

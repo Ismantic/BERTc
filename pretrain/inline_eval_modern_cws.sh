@@ -18,7 +18,7 @@ $PY -u $SCRIPT \
     --dev_jsonl /home/tfbao/Shiyu/BERTc/finetune/NLP_BERT_CRF/data/cws_dev.pd98.clean.jsonl \
     --track_tsv "$TRACK" \
     --max_train 50000 --max_dev 2000 \
-    --epochs 3 --batch_size 64 --lr 5e-5 || {
+    --epochs 3 --batch_size 32 --lr 5e-5 || {
         echo "[modern_eval] FAILED on $CKPT" | tee -a "$TRACK"
         exit 0
     }
