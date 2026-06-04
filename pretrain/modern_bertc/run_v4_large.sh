@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Modern BERTc v4 — Large(~350M),用全部 17.65B 数据
+# Modern BERTc v4 — Large(~302M),用全部 17.65B 数据
 #
-# 架构: 28L / 1024H / 2624I / 16h(ModernBERT-large 对齐),~350M params
+# 架构: 24L / 1024H / 2624I / 16h(RoBERTa-wwm-large 同深度),~302M params
 # 数据: data3/train_v3.pt 全部 17.65B token(复用 v3 pretokenize 结果)
 # Recipe: 跟 v3 完全一致(StableAdamW + Damped Cosine + Dynamic MLM + EMA +
 #                       cross-doc + ScaledSinusoidal + 简化 head + grad_clip 0.5)
@@ -33,7 +33,7 @@ LOG_STEPS=10
 echo "=== Modern BERTc v4-Large 训练 $(date) ==="
 echo "  data: $DATA (17.65B tokens 全用)"
 echo "  output: $OUTPUT"
-echo "  架构: 28L/1024H/2624I/16h ≈ 350M"
+echo "  架构: 24L/1024H/2624I/16h ≈ 302M"
 echo "  batch: $BATCH × accum $ACCUM = eff $(( BATCH * ACCUM ))"
 echo "  max_steps: $MAX_STEPS  warmup: $WARMUP  save_steps: $SAVE_STEPS"
 
@@ -44,7 +44,7 @@ cd $ROOT && $PY -u train_modern.py \
     --pad_token_id 12531 \
     --mask_token_id 12535 \
     --hidden_size 1024 \
-    --num_layers 28 \
+    --num_layers 24 \
     --num_heads 16 \
     --intermediate_size 2624 \
     --max_position 1024 \
