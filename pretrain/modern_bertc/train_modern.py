@@ -293,6 +293,9 @@ def main():
     p.add_argument("--inline_eval_cmd", default=None,
                    help="每 save_steps 后 fire 的 shell 命令,{ckpt} 替换为 ckpt dir")
     p.add_argument("--init_from_ckpt", default=None)
+    p.add_argument("--resume_step", type=int, default=0,
+                   help="resume 时 step 从这里起算(LR/MLM/accum schedule 自动续上)。"
+                        "配合 --init_from_ckpt 用。optim 状态不恢复(没存),会重建 momentum。")
     args = p.parse_args()
 
     device = "cuda"
@@ -379,12 +382,14 @@ def main():
         n_ema_params = sum(t.numel() for t in ema.shadow.values())
         print(f"EMA: decay={args.ema_decay}, shadow params={n_ema_params/1e6:.1f}M")
 
-    step = 0
+    step = args.resume_step
     accum = 0
-    cur_accum_target = current_grad_accum(0, args.max_steps,
+    cur_accum_target = current_grad_accum(step, args.max_steps,
                                            peak=args.gradient_accumulation_steps,
                                            warmup_frac=args.accum_warmup_frac,
                                            min_accum=args.accum_min)
+    if args.resume_step > 0:
+        print(f"Resume from step {args.resume_step}, LR/MLM/accum schedule 自动续上", flush=True)
     t0 = time.time()
     loss_acc = 0.0
     n_micro_acc = 0   # 累积 micro-step 数(grad accum 变化时,不能用 logging × N 算)
