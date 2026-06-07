@@ -3,8 +3,9 @@
 #
 # 架构: 24L / 1024H / 2624I / 16h(RoBERTa-wwm-large 同深度),~302M params
 # 数据: data3/train_v3.pt 全部 17.65B token(复用 v3 pretokenize 结果)
-# Recipe: 跟 v3 完全一致(StableAdamW + Damped Cosine + Dynamic MLM + EMA +
-#                       cross-doc + ScaledSinusoidal + 简化 head + grad_clip 0.5)
+# Recipe: 跟 v4-Mid 完全一致(StableAdamW + Damped Cosine + 固定 15% MLM +
+#                            cross-doc + ScaledSinusoidal + 简化 head + grad_clip 0.5)
+#         注:砍 Dynamic MLM、砍 EMA(v4-Mid 验证过这套 recipe 拿到 MT/CSC 双 SOTA)
 # GPU: 1× 4090,bf16,batch_size 16(从 v3 的 32 减半防显存爆)
 
 set -euo pipefail
@@ -68,8 +69,9 @@ cd $ROOT && $PY -u train_modern.py \
     --accum_warmup_frac 0.05 \
     --accum_min 1 \
     --mlm_low 0.15 \
-    --mlm_high 0.30 \
+    --mlm_high 0.15 \
     --mlm_warmup_frac 0.05 \
+    --no_ema \
     --damp_gamma 0.0 \
     --n_cycles 1 \
     --save_steps $SAVE_STEPS \
