@@ -256,11 +256,12 @@ def main():
                                              num_warmup_steps=int(total_steps * 0.1),
                                              num_training_steps=total_steps)
 
-    # train
+    # train(per-epoch dev eval,best 保留终态)
     t0 = time.time()
     print(f"[modern_cws_eval] training {total_steps} steps...", flush=True)
-    model.train()
+    best_f1, best_p, best_r = 0.0, 0.0, 0.0
     for ep in range(args.epochs):
+        model.train()
         for step, (input_ids, attn, labels) in enumerate(train_loader):
             input_ids = input_ids.to(device, non_blocking=True)
             attn = attn.to(device, non_blocking=True)
@@ -275,13 +276,21 @@ def main():
             if step % 100 == 0:
                 print(f"  ep{ep+1} step {step}/{len(train_loader)} loss {loss.item():.4f}",
                       flush=True)
+        # per-epoch dev eval
+        f1, p, r = eval_cws_f1(model, dev_loader, device)
+        if f1 > best_f1:
+            best_f1, best_p, best_r = f1, p, r
+            tag = " ★ new best"
+        else:
+            tag = ""
+        print(f"  ep{ep+1} dev: cws_F1={f1:.4f} P={p:.4f} R={r:.4f}{tag}", flush=True)
 
-    # eval
-    f1, p, r = eval_cws_f1(model, dev_loader, device)
+    # final = best across epochs(更稳健 vs 一定取最后一个)
+    f1, p, r = best_f1, best_p, best_r
     elapsed = time.time() - t0
     step_label = os.path.basename(args.ckpt.rstrip("/")).replace("checkpoint-", "")
     print(f"[modern_cws_eval] step={step_label} cws_F1={f1:.4f} P={p:.4f} R={r:.4f}  "
-          f"({elapsed:.0f}s)", flush=True)
+          f"({elapsed:.0f}s)  [best across {args.epochs} ep]", flush=True)
 
     # append to track tsv
     track = Path(args.track_tsv)

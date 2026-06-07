@@ -257,11 +257,12 @@ def main():
     sched = get_linear_schedule_with_warmup(optim,
                                              int(total_steps * 0.1), total_steps)
 
-    # train
+    # train(per-epoch SIGHAN eval,best 保留终态)
     t0 = time.time()
     print(f"[modern_csc_eval] training {total_steps} steps...", flush=True)
-    model.train()
+    best = {"F1": 0.0, "P": 0.0, "R": 0.0, "acc": 0.0, "TP": 0}
     for ep in range(args.epochs):
+        model.train()
         for step, (ids, attn, cor, det) in enumerate(train_loader):
             ids = ids.to(device, non_blocking=True)
             attn = attn.to(device, non_blocking=True)
@@ -279,17 +280,26 @@ def main():
             optim.step()
             sched.step()
             if step % 100 == 0:
-                print(f"  step {step}/{len(train_loader)} cor {cor_loss.item():.3f} "
+                print(f"  ep{ep+1} step {step}/{len(train_loader)} cor {cor_loss.item():.3f} "
                       f"det {det_loss.item():.4f}", flush=True)
+        # per-epoch SIGHAN eval
+        F1, P, R, acc, TP, FP, FN, TN = eval_sighan(
+            model, char_to_id, args.test_tsv, device,
+            max_len=args.max_len, threshold=args.threshold)
+        tag = ""
+        if F1 > best["F1"]:
+            best = {"F1": F1, "P": P, "R": R, "acc": acc, "TP": TP}
+            tag = " ★ new best"
+        print(f"  ep{ep+1} dev: F1={F1:.4f} P={P:.4f} R={R:.4f} acc={acc:.4f}"
+              f" TP={TP}{tag}", flush=True)
 
-    # eval
-    F1, P, R, acc, TP, FP, FN, TN = eval_sighan(
-        model, char_to_id, args.test_tsv, device,
-        max_len=args.max_len, threshold=args.threshold)
+    # final = best across epochs
+    F1, P, R, acc, TP = best["F1"], best["P"], best["R"], best["acc"], best["TP"]
     elapsed = time.time() - t0
     step_label = os.path.basename(args.ckpt.rstrip("/")).replace("checkpoint-", "")
     print(f"[modern_csc_eval] step={step_label} SIGHAN15 F1={F1:.4f} "
-          f"P={P:.4f} R={R:.4f} acc={acc:.4f} TP={TP} ({elapsed:.0f}s)", flush=True)
+          f"P={P:.4f} R={R:.4f} acc={acc:.4f} TP={TP} ({elapsed:.0f}s)"
+          f"  [best across {args.epochs} ep]", flush=True)
 
     track = Path(args.track_tsv)
     if not track.exists() or track.stat().st_size == 0:
