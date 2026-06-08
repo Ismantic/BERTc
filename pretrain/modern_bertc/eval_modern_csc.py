@@ -49,7 +49,11 @@ class ModernBertCSC(nn.Module):
         self.bert.load_state_dict(bert_sd, strict=True)
         H = cfg.hidden_size
         self.vocab_size = vocab_size
-        self.cor_head = nn.Linear(H, vocab_size)
+        # cor_head tied 到 backbone embed:Modern BERTc 简化 MLM head
+        # (logits = h @ embed.weight.T)预训完 h 已跟 embed 对齐,
+        # fresh nn.Linear 会废掉对齐,CSC F1 差 ~0.05+(实测 v4-Mid 0.78 vs 0.83)
+        self.cor_head = nn.Linear(H, vocab_size, bias=False)
+        self.cor_head.weight = self.bert.embed.weight
         self.det_head = nn.Linear(H, 1)
         self.cfg = cfg
 
