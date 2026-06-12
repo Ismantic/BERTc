@@ -2,19 +2,20 @@
 
 SOTA + 次好的**硬链接**(同 inode;Summer/BERT/ 已删但 BERTc 这端 inode 引用仍在,数据未释放)。已加 `.gitignore`(.pt 不进 git)。
 
-## 当前 SOTA(2026-06-07 更新,Modern BERTc v4-Mid 165M)
+## 当前 SOTA(2026-06-12 更新)
 
 | 文件 | 任务 | 指标 | 用于 |
 |---|---|---|---|
-| `sota_mt_v4mid_fgm_5ep_best.pt` | **MT joint(CWS/POS/NER)** | **score 1.4689**(cws **0.9836** / pos **0.9753** / ner **0.9632**)| 联合切词 + 词性 + 实体 |
-| `sota_csc_v4mid_5ep_best.pt` | **CSC(SIGHAN-15)** | **F1 0.8308**(P 0.9516 R 0.7373 acc 0.8416)| 中文文本纠错 |
+| `sota_mt_v4large_fgm_5ep_best.pt` | **MT joint(CWS/POS/NER)** | **score 1.4712**(cws **0.9840** / pos **0.9800** / ner **0.9660**)| **v4-Large 316M**,2026-06-12 取代 v4-Mid |
+| `sota_csc_v4mid_5ep_best.pt` | **CSC(SIGHAN-15)** | F1 0.8308(P 0.9516 R 0.7373 acc 0.8416)| **v4-Mid 165M**,v4-Large 同 setup 反而 0.8235(原因待查)|
 | `sota_cws_v6_fgm_5ep_best.pt` | **单 CWS** | clean F1 0.9819 | 纯切词任务(未更新)|
 
 ## 旧 SOTA(保留对照)
 
 | 文件 | 任务 | 指标 | 备注 |
 |---|---|---|---|
-| `sota_mt_v65_fgm_5ep_best.pt` | MT joint | score 1.4636 | v6.5 165M,**被 v4-Mid 超 +0.0053** |
+| `sota_mt_v4mid_fgm_5ep_best.pt` | MT joint | score 1.4689 | v4-Mid 165M,**被 v4-Large 超 +0.0023** |
+| `sota_mt_v65_fgm_5ep_best.pt` | MT joint | score 1.4636 | v6.5 165M,被 v4-Mid 超 +0.0053 |
 
 ## 次好
 
