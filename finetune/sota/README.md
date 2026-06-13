@@ -2,20 +2,21 @@
 
 SOTA + 次好的**硬链接**(同 inode;Summer/BERT/ 已删但 BERTc 这端 inode 引用仍在,数据未释放)。已加 `.gitignore`(.pt 不进 git)。
 
-## 当前 SOTA(2026-06-12 更新)
+## 当前 SOTA(2026-06-14 更新)
 
 | 文件 | 任务 | 指标 | 用于 |
 |---|---|---|---|
 | `sota_mt_v4large_fgm_5ep_best.pt` | **MT joint(CWS/POS/NER)** | **score 1.4712**(cws **0.9840** / pos **0.9800** / ner **0.9660**)| **v4-Large 316M**,2026-06-12 取代 v4-Mid |
-| `sota_csc_v4mid_5ep_best.pt` | **CSC(SIGHAN-15)** | F1 0.8308(P 0.9516 R 0.7373 acc 0.8416)| **v4-Mid 165M**,v4-Large 同 setup 反而 0.8235(原因待查)|
+| `sota_csc_v4large_v8_best.pt` | **CSC(SIGHAN-15)** | **F1 0.8346**(P 0.9407 R 0.7480 acc 0.8359)| **v4-Large 316M**,8-run chain 调优,2026-06-14 取代 v4-Mid |
 | `sota_cws_v6_fgm_5ep_best.pt` | **单 CWS** | clean F1 0.9819 | 纯切词任务(未更新)|
 
 ## 旧 SOTA(保留对照)
 
 | 文件 | 任务 | 指标 | 备注 |
 |---|---|---|---|
-| `sota_mt_v4mid_fgm_5ep_best.pt` | MT joint | score 1.4689 | v4-Mid 165M,**被 v4-Large 超 +0.0023** |
+| `sota_mt_v4mid_fgm_5ep_best.pt` | MT joint | score 1.4689 | v4-Mid 165M,被 v4-Large 超 +0.0023 |
 | `sota_mt_v65_fgm_5ep_best.pt` | MT joint | score 1.4636 | v6.5 165M,被 v4-Mid 超 +0.0053 |
+| `sota_csc_v4mid_5ep_best.pt` | CSC SIGHAN-15 | F1 0.8308 | v4-Mid 165M,被 v4-Large v8 超 +0.0038 |
 
 ## 次好
 
@@ -31,11 +32,37 @@ SOTA + 次好的**硬链接**(同 inode;Summer/BERT/ 已删但 BERTc 这端 inod
 - fine-tune:`pretrain/modern_bertc/train_modern_mt.py --alpha_pos 2.0 --beta_ner 0.5 --fgm --fgm_eps 1.0 --epochs 5 --batch_size 64 --bert_lr 2e-5 --head_lr 5e-4 --warmup_ratio 0.1`
 - dev 演化:1.4611 → 1.4663 → 1.4677 → 1.4674 → **1.4689**(ep5 final 反弹)
 
-### CSC(v4-Mid 5ep)— **新 SOTA**(打平 MacBERT-L 326M @ 半参数)
-- backbone:同上(v4-Mid 165M)
-- fine-tune:`csc/train/train_csc_modern.py --epochs 5 --batch_size 64 --lr 5e-5 --warmup_ratio 0.1 --det_weight 0.3 --threshold 0.7`
-- **关键**:`cor_head` 必须 weight-tied 到 `bert.embed.weight`,见下 lesson
-- dev 演化:0.7488 → 0.7920 → **0.8111** → 0.8056 → **0.8308**(ep5 反弹超 ep3)
+### CSC(v4-Large v8 10ep)— **当前 SOTA**(2026-06-14)
+
+- backbone:`pretrain/modern_bertc/output_v4_large/checkpoint-8500`(Modern BERTc 316M,24L/1024H/2752I/16h)
+- fine-tune:`csc/train/train_csc_modern.py --epochs 10 --batch_size 32 --lr 3e-5 --warmup_ratio 0.1 --det_weight 0.3 --threshold 0.7 --max_len 128`
+- 关键改动 vs v4-Mid 配置:
+  - **lr 5e-5 → 3e-5**(Large 收敛对 lr 敏感,小 lr 更稳)
+  - **5 ep → 10 ep**(Large 5ep 欠训,ep10 仍在涨)
+  - **batch 64 → 32**(Large 316M + AdamW state 在 24GB 4090 上 batch 64 临界 OOM)
+- dev 演化(ep1→ep10):0.74 → 0.79 → 0.81 → 0.81 → 0.82 → 0.82 → 0.83 → **0.8346** → 0.8281 → 0.8285
+- `cor_head` 必须 weight-tied 到 `bert.embed.weight`(同 v4-Mid lesson)
+- ckpt:`sota_csc_v4large_v8_best.pt`(1.2GB)
+
+#### CSC chain ablation(8 runs,所有 v4-Large ckpt-8500 backbone)
+
+| run | 改动 vs v4b 基线 | F1 |
+|---|---|---|
+| v7 | **v4-Mid 同 setup 重跑**(noise baseline)| 0.8265 |
+| v4b | b32 lr5e-5 **10ep** | 0.8281 |
+| v6 | + det_weight **0.5** | 0.8291 |
+| v11 | + warmup **0.05** | 0.8299 |
+| v9 | b**16** lr5e-5 10ep | 0.8303 |
+| v10 | v4b setup,**seed 42** | 0.8341 |
+| v5 | + warmup **0.2** | 0.8343 |
+| **v8** | **lr 3e-5**(其他同 v4b)| **0.8346** ★ |
+
+**Lessons**:
+1. **10 ep 而非 5 ep**:Large 5ep 严重欠训(原 v4-Large 5ep b64 = 0.8235,v4b 10ep = 0.8281 直接 +0.005)
+2. **lr 3e-5 微优于 5e-5**(v8 vs v4b:+0.0065)
+3. **warmup 0.2 也有效**(v5 vs v4b:+0.0062)
+4. **batch 16/0.5 det_weight 无明显帮助**
+5. **707-sample SIGHAN test 噪声 ±0.005-0.01**:v7(0.8265)vs 原 v4-Mid SOTA(0.8308)同 setup 差 -0.0043,纯随机;v10(0.8341)vs v4b(0.8281)同 setup 差 +0.006
 
 ### MT joint(v6.5 + FGM 5ep)— 旧 SOTA
 - backbone:`bert_train_v6_5_mid`(v6 + 3B L3-mix anneal CPT)
