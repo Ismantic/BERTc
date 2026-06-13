@@ -2,3 +2,22 @@
 [inline_eval] FAILED on /home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v1/checkpoint-10000
 [inline_eval] FAILED on /home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v1/checkpoint-15000
 2026-06-02 16:17:26	15000	/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v1/checkpoint-15000	0.9438	0.9415	0.9460
+2026-06-02 21:48:33	100	/tmp/dryrun_v3/checkpoint-100	0.9209	0.9127	0.9293
+2026-06-03 14:35:18	1500	/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v3/checkpoint-1500	0.9367	0.9292	0.9444
+2026-06-03 22:38:42	3000	/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v3/checkpoint-3000	0.9594	0.9561	0.9627
+2026-06-04 06:52:41	4500	/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v3/checkpoint-4500	0.9620	0.9590	0.9650
+2026-06-04 15:06:52	6000	/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v3/checkpoint-6000	0.9623	0.9592	0.9654
+2026-06-04 20:42:38	7000	/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v3/checkpoint-7000	0.9627	0.9600	0.9654
+2026-06-05 06:31:07	1500	/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v4_mid/checkpoint-1500	0.9724	0.9707	0.9742
+2026-06-05 16:10:19	3000	/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v4_mid/checkpoint-3000	0.9766	0.9758	0.9773
+2026-06-06 04:40:23	4500	/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v4_mid/checkpoint-4500	0.9779	0.9776	0.9781
+2026-06-06 14:19:07	6000	/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v4_mid/checkpoint-6000	0.9782	0.9777	0.9786
+2026-06-06 23:57:13	7500	/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v4_mid/checkpoint-7500	0.9784	0.9777	0.9791
+2026-06-07 06:30:01	8500	/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v4_mid/checkpoint-8500	0.9795	0.9796	0.9794
+[modern_eval] FAILED on /home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v4_large/checkpoint-1500
+2026-06-08 07:52:00	1500	/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v4_large/checkpoint-1500	0.9755	0.9751	0.9760
+2026-06-08 23:58:48	3000	/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v4_large/checkpoint-3000	0.9773	0.9765	0.9780
+2026-06-09 18:34:40	4500	/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v4_large/checkpoint-4500	0.9794	0.9796	0.9793
+2026-06-10 13:09:58	6000	/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v4_large/checkpoint-6000	0.9801	0.9800	0.9802
+2026-06-11 07:45:15	7500	/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v4_large/checkpoint-7500	0.9795	0.9789	0.9800
+2026-06-11 20:27:30	8500	/home/tfbao/Shiyu/BERTc/pretrain/modern_bertc/output_v4_large/checkpoint-8500	0.9799	0.9799	0.9798
