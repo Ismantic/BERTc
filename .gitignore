@@ -42,6 +42,9 @@ experiments.tsv
 # SOTA checkpoints — large binary, not committed but preserved on disk
 finetune/sota/*.pt
 
+# Generated Hugging Face release folders
+hf_release/
+
 # CSC baseline 模型 (大文件)
 csc/baseline/macbert4csc_ckpt
 csc/data/raw/*.pt
