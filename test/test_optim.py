@@ -4,7 +4,7 @@ v4-Large(HF 上的 Ismantic/BERTc-315M)就是用 optimi.StableAdamW 训出来的
 重写必须逐步等价 —— 优化器数值行为一变,等于换了个 recipe。
 optimi 不是 src/ 的依赖,只在这里当参照物。
 
-    python tests/test_optim.py
+    python test/test_optim.py
 """
 import sys
 from pathlib import Path

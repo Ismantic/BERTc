@@ -1,61 +1,81 @@
 #!/usr/bin/env bash
-# 重新编译安装 BERTc 的两个 C++ 依赖,并下载 Wapic 的分词模型。
+# 装 BERTc 的两个 C++ 依赖:PieceTokenizer(字级分词器 + 词表)和 Wapic(CRF 分词器)。
+# 仓库不在本地就从 GitHub clone —— 整个 BERTc 只依赖 Hugging Face 和 GitHub。
 #
-#   bash prepare/install_deps.sh              # 装两个 + 下模型
+#   bash prepare/install_deps.sh              # 两个都装 + 下 Wapic 模型
 #   bash prepare/install_deps.sh piece        # 只装 PieceTokenizer
 #   bash prepare/install_deps.sh wapic        # 只装 Wapic(含模型)
-#   bash prepare/install_deps.sh --verify     # 不装,只跑基线校验
+#   bash prepare/install_deps.sh --verify     # 不装,只跑行为校验
 #
-# 装完会自动跑 tests/test_tokenizer.py 校验行为没变 —— 这一步不能跳:
+# 仓库默认 clone 到 BERTC_DEPS_DIR(默认 <仓库>/deps),已有就 git pull。
+# 想用本机既有的 checkout:BERTC_DEPS_DIR=/home/tfbao/Shiyu bash prepare/install_deps.sh
+#
+# 装完自动跑 test/test_tokenizer.py 校验行为没变 —— 这一步不能跳:
 #   - PieceTokenizer 的编码一旦变了,12536 词表和已发布模型的 embedding 就对不上,
 #     但代码不会报错,只会悄悄训出/推出垃圾结果
 #   - Wapic 的切词变了会改变 WWM 的词边界(影响预训练掩码粒度,不影响词表)
 #
-# 两个仓库都是 CMake 项目,需要 cmake、C++17 编译器。
-# 用 uv pip,这个 venv 里没有 pip。
+# 需要 cmake、C++17 编译器、git。用 uv pip,这个 venv 里没有 pip。
 set -euo pipefail
 
-PY=/home/tfbao/.venv/bin/python
-PIECE_REPO=/home/tfbao/Shiyu/PieceTokenizer
-WAPIC_REPO=/home/tfbao/Shiyu/Wapic
+PY=${BERTC_PYTHON:-/home/tfbao/.venv/bin/python}
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DEPS_DIR=${BERTC_DEPS_DIR:-$REPO_ROOT/deps}
+
+PIECE_REPO=$DEPS_DIR/PieceTokenizer
+WAPIC_REPO=$DEPS_DIR/Wapic
+PIECE_URL=https://github.com/Ismantic/PieceTokenizer.git
+WAPIC_URL=https://github.com/Ismantic/Wapic.git
 
 TARGET="${1:-all}"
 
 log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
+# GitHub 要走代理,hf-mirror 反过来要清代理(见 data/download.py)
+git_clone_or_pull() {
+    local url=$1 dst=$2
+    if [[ -d "$dst/.git" ]]; then
+        echo "  已有 $dst,git pull"
+        git -C "$dst" pull --ff-only
+    else
+        mkdir -p "$(dirname "$dst")"
+        git clone --depth 1 "$url" "$dst"
+    fi
+    git -C "$dst" log -1 --format='  %h %ci  %s'
+}
+
 install_piece() {
-    log "PieceTokenizer  ($PIECE_REPO)"
-    [[ -d "$PIECE_REPO" ]] || { echo "找不到 $PIECE_REPO"; exit 1; }
-    git -C "$PIECE_REPO" log -1 --format='  仓库 %h %ci  %s'
-    # editable 安装:.so 会编译到仓库根目录,venv 通过 .pth 指过去。
-    # --no-build-isolation 让它用 venv 里现成的 setuptools,省一次隔离环境构建。
+    log "PieceTokenizer"
+    git_clone_or_pull "$PIECE_URL" "$PIECE_REPO"
+    # editable 安装:.so 编译到仓库根目录,venv 通过 .pth 指过去。
+    # 这样 prepare/tokenizer.py 能顺着 piece_tokenizer.__file__ 找到同仓库的
+    # save/BERTc-Tokenizer.pt —— 词表只有一个来源,不会两边漂移。
     uv pip install -e "$PIECE_REPO" --python "$PY" --no-build-isolation --reinstall
+    local model="$PIECE_REPO/save/BERTc-Tokenizer.pt"
+    [[ -f "$model" ]] && echo "  词表 $model ($(du -h "$model" | cut -f1))" \
+                      || echo "  !! 仓库里没有 save/BERTc-Tokenizer.pt"
 }
 
 install_wapic() {
-    log "Wapic  ($WAPIC_REPO)"
-    [[ -d "$WAPIC_REPO" ]] || { echo "找不到 $WAPIC_REPO"; exit 1; }
-    git -C "$WAPIC_REPO" log -1 --format='  仓库 %h %ci  %s'
-    # 非 editable:scikit-build-core 会把 _core.so 装进 site-packages/wapic/。
-    # 注意这意味着**改了 Wapic 源码必须重跑这个脚本**,否则 venv 里还是旧的 ——
-    # 以前是手工拷 .so,容易忘。
+    log "Wapic"
+    git_clone_or_pull "$WAPIC_URL" "$WAPIC_REPO"
+    # 非 editable:scikit-build-core 把 _core.so 装进 site-packages/wapic/。
+    # 也就是说**改了 Wapic 源码必须重跑本脚本**,否则 venv 里还是旧的。
     uv pip install "$WAPIC_REPO" --python "$PY" --reinstall
 
     log "Wapic 分词模型"
-    # 模型不再随仓库分发,从 HF 拉(Ismantic/wapic-cws → data/model/wapic-cws.wac)
     local model="$WAPIC_REPO/data/model/wapic-cws.wac"
     if [[ -f "$model" ]]; then
-        echo "  已存在:$model  ($(du -h "$model" | cut -f1))"
+        echo "  已存在:$model ($(du -h "$model" | cut -f1))"
     else
-        # hf-mirror 走不通代理,必须清掉 —— Wapic 的 download.py 自己不清。
-        # (GitHub 反过来需要代理,见 data/download.py 里的注释)
+        # hf-mirror 走不通代理,必须清掉 —— Wapic 的 download.py 自己不清
         (cd "$WAPIC_REPO" \
             && env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY \
                    -u all_proxy -u ALL_PROXY \
                    HF_ENDPOINT="${HF_ENDPOINT:-https://hf-mirror.com}" \
                "$PY" scripts/download.py model)
     fi
+    echo "  BERTC_WAPIC_MODEL=$model"
 }
 
 case "$TARGET" in
@@ -66,5 +86,5 @@ case "$TARGET" in
     *)        echo "用法: $0 [all|piece|wapic|--verify]"; exit 1 ;;
 esac
 
-log "校验:行为与 tests/fixtures/tokenizer_baseline.json 是否一致"
-cd "$REPO_ROOT" && "$PY" tests/test_tokenizer.py
+log "校验:行为与 test/fixtures/tokenizer_baseline.json 是否一致"
+cd "$REPO_ROOT" && "$PY" test/test_tokenizer.py

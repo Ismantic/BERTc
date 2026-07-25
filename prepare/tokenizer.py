@@ -3,19 +3,38 @@
 只有 prepare/ 用得到 —— src/ 从头到尾读预编码好的 id,不碰文本,
 所以 PieceTokenizer 不是 src/ 的依赖。
 
-词表约定(来自仓库根的 tokenizer/):
-  piece.model         SentencePiece 模型,vocab_size() = 12535
-  mask_token_id.txt   [MASK] 的 id = 12535,追加在 piece 词表之后
-  → BERT 侧的 vocab_size = 12535 + 1 = 12536
+词表不放在本仓库,而是取自 PieceTokenizer 仓库的 save/BERTc-Tokenizer.pt
+(与本仓库以前那份 piece.model 逐字节相同)。这样词表只有一个来源,
+不会出现两边漂移。路径通过已安装的 piece_tokenizer 模块反查,
+所以 PieceTokenizer clone 在哪都能找到;也可以用 BERTC_PIECE_MODEL 覆盖。
+
+  vocab_size() = 12535 是 piece 词表大小
+  [MASK] 追加在其后,id = 12535
+  → BERT 侧 vocab_size = 12536
 
 **必须用 dict="no" 加载**(字模式,不挂分词词典)。挂了词典 SentencePiece
 的 SplitTextCn 行为就跟训练时不一致,编码结果整体偏掉,而且不会报错。
 (参数在 2026-07 的 PieceTokenizer 里从 cn_dict 改名成了 dict。)
 """
+import os
 import shutil
 from pathlib import Path
 
 import piece_tokenizer as _pt
+
+PIECE_MODEL_NAME = "BERTc-Tokenizer.pt"
+
+
+def default_piece_model() -> Path:
+    """定位词表文件。
+
+    piece_tokenizer 是 editable 安装,__file__ 就在 PieceTokenizer 仓库根目录,
+    所以能顺着找到同仓库的 save/BERTc-Tokenizer.pt。
+    """
+    env = os.environ.get("BERTC_PIECE_MODEL")
+    if env:
+        return Path(env)
+    return Path(_pt.__file__).resolve().parent / "save" / PIECE_MODEL_NAME
 
 
 class PieceTokenizer:
@@ -26,19 +45,20 @@ class PieceTokenizer:
     变成真解码,口径就跟 pycorrector 对不上了。见 id_to_char()。
     """
 
-    def __init__(self, model_dir):
-        self.dir = Path(model_dir)
-        piece_path = self.dir / "piece.model"
-        if not piece_path.exists():
-            raise FileNotFoundError(f"{self.dir} 下没有 piece.model")
+    def __init__(self, piece_model=None):
+        self.path = Path(piece_model) if piece_model else default_piece_model()
+        if not self.path.exists():
+            raise FileNotFoundError(
+                f"找不到词表 {self.path}。\n"
+                f"跑 bash prepare/install_deps.sh piece 安装 PieceTokenizer,"
+                f"或用 BERTC_PIECE_MODEL 指定路径。")
 
         self._tok = _pt.Tokenizer()
-        self._tok.load(str(piece_path), dict="no")
+        self._tok.load(str(self.path), dict="no")
 
         piece_vocab = self._tok.vocab_size()
-        mask_file = self.dir / "mask_token_id.txt"
-        self.mask_token_id = (int(mask_file.read_text().strip())
-                              if mask_file.exists() else piece_vocab)
+        # [MASK] 追加在 piece 词表之后,所以它的 id 就等于 piece 词表大小
+        self.mask_token_id = piece_vocab
         self.vocab_size = piece_vocab + 1
 
         self.pad_token_id = self._tok.piece_to_id("<pad>")
@@ -48,8 +68,9 @@ class PieceTokenizer:
         self._cache: dict[str, int] = {}
 
     def __repr__(self) -> str:
-        return (f"PieceTokenizer(vocab={self.vocab_size}, pad={self.pad_token_id}, "
-                f"unk={self.unk_token_id}, mask={self.mask_token_id})")
+        return (f"PieceTokenizer({self.path.name}: vocab={self.vocab_size}, "
+                f"pad={self.pad_token_id}, unk={self.unk_token_id}, "
+                f"mask={self.mask_token_id})")
 
     def char_to_id(self, c: str) -> int:
         """单字 → id。编码不出东西时落到 unk。"""
@@ -87,19 +108,14 @@ class PieceTokenizer:
                     self.char_to_id(c)
         return len(self._cache)
 
-    def copy_assets(self, output_dir) -> None:
-        """把 tokenizer 文件拷到 ckpt 旁,方便推理时直接加载。"""
+    def copy_to(self, output_dir, name: str = "piece.model") -> Path:
+        """把词表拷到发布目录。发布包里沿用 piece.model 这个名字。"""
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
-        for name in ("piece.model", "mask_token_id.txt", "config.json"):
-            src = self.dir / name
-            if src.exists():
-                shutil.copy2(src, output_dir / name)
+        dst = output_dir / name
+        shutil.copy2(self.path, dst)
+        return dst
 
 
-DEFAULT_TOKENIZER_DIR = (Path(__file__).resolve().parents[1]
-                         / "tokenizer")
-
-
-def load_tokenizer(model_dir=None) -> PieceTokenizer:
-    return PieceTokenizer(model_dir or DEFAULT_TOKENIZER_DIR)
+def load_tokenizer(piece_model=None) -> PieceTokenizer:
+    return PieceTokenizer(piece_model)

@@ -32,7 +32,7 @@ run_v4_large.sh   v4-Large 全流程入口
 
 **`det_labels` 必须按字比对,不能按 id。** 两个不同的字可能都落到 UNK,按 id
 比会漏掉那处错误。这不是理论风险:实测 `all_pairs.pkl` 前 2000 条里就有 1 处
-(见 `tests/test_prepare.py` 的输出)。
+(见 `test/test_prepare.py` 的输出)。
 
 **CSC 的 `id_to_char` 反查表只覆盖编码时见过的字。** `src/evaluate.py` 靠它把
 预测还原成句子跟标准答案比。表放大会让本该"保留原字"的未知 id 变成真解码,
@@ -51,9 +51,9 @@ run_v4_large.sh   v4-Large 全流程入口
 ## 校验
 
 ```bash
-python tests/test_prepare.py     # builder 产出 vs 旧管线
-python tests/test_tokenizer.py   # C++ 依赖重建后行为有没有变
+python test/test_prepare.py     # builder 产出 vs 旧管线
+python test/test_tokenizer.py   # C++ 依赖重建后行为有没有变
 ```
 
-重建 PieceTokenizer / Wapic **之前**要先 `python tests/capture_baseline.py` 抓基线,
+重建 PieceTokenizer / Wapic **之前**要先 `python test/capture_baseline.py` 抓基线,
 顺序反了就失去意义。

@@ -5,8 +5,8 @@
 prepare/ 产出的真实数据集,跑完整评测,看能不能还原 finetune/sota/README.md
 里记的数。
 
-    python tests/test_reproduce_sota.py            # 两条都跑
-    python tests/test_reproduce_sota.py --only mt
+    python test/test_reproduce_sota.py            # 两条都跑
+    python test/test_reproduce_sota.py --only mt
 
 慢:MT 要在 21,143 句 dev 上解码,CSC 要跑 707 条,单卡几分钟。
 """

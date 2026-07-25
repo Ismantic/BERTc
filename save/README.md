@@ -5,7 +5,7 @@
 ```bash
 python -m save.export --list                          # 看哪些 checkpoint 就位
 python -m save.export                                 # 导出全部六个
-python tests/test_save.py                             # 验证发布目录能独立跑
+python test/test_save.py                             # 验证发布目录能独立跑
 python -m save.upload --namespace Ismantic --dry-run  # 先看要传什么
 python -m save.upload --namespace Ismantic            # 真传
 ```
@@ -46,13 +46,13 @@ assets/        随模型一起发出去的推理代码(真实文件,不是模板
 (200+ 行)。这样的代码在发出去之前从来没被执行过 —— 示例跑不通、API 改了没跟上,
 都要等用户来报。
 
-现在 `assets/` 下是真实的 `.py`,`tests/test_save.py` 会切到发布目录、
+现在 `assets/` 下是真实的 `.py`,`test/test_save.py` 会切到发布目录、
 只用目录内的模块跑一遍真实推理,跟外部用户的处境一样。骨干定义 `model.py` 和
 `crf.py` 直接从 `src/` 拷,不再维护第二份。
 
 ## 验证
 
-`tests/test_save.py` 查三件事:
+`test/test_save.py` 查三件事:
 
 1. **权重忠实性** —— 发布的 safetensors 与源 checkpoint 逐张量比对。
    比跑一次前向彻底:前向只覆盖走到的路径,这里覆盖每一个参数。

@@ -3,7 +3,7 @@
 MT 的 CWS / NER head 都挂 CRF,重写必须逐值等价,否则 joint 1.4712 复现不了。
 torchcrf 不是 src/ 的依赖,只在这里当参照物 —— 装了才跑,没装就跳过。
 
-    python tests/test_crf.py
+    python test/test_crf.py
 """
 import sys
 from pathlib import Path

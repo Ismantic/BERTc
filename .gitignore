@@ -60,3 +60,4 @@ csc/data/raw/*.pt
 csc/data/raw/*.bin
 data/downloads/
 data/derived/
+deps/

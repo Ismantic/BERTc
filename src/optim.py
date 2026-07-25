@@ -6,7 +6,7 @@
 
 damped_cosine_lr / current_grad_accum 原本就写在 train_modern.py 里,搬过来集中放。
 
-StableAdamW 的实现与 optimi 0.3.3 逐运算对齐(见 tests/test_optim.py 的对拍),
+StableAdamW 的实现与 optimi 0.3.3 逐运算对齐(见 test/test_optim.py 的对拍),
 因为 v4-Large(HF 上的 Ismantic/BERTc-315M)就是用它训出来的,换个数值行为
 不同的优化器等于换了个 recipe。
 """

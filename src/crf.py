@@ -1,7 +1,7 @@
 """线性链 CRF。只依赖 torch,替掉 torchcrf。
 
 MT 的 CWS head 和 NER head 各挂一个,是 joint score 1.4712 的组成部分,
-所以接口和数值都跟 torchcrf 0.7.2 对齐(见 tests/test_crf.py 的对拍):
+所以接口和数值都跟 torchcrf 0.7.2 对齐(见 test/test_crf.py 的对拍):
 
   - 参数:start_transitions (T,)、end_transitions (T,)、transitions (T,T)
     其中 transitions[i, j] = 从 tag i 转到 tag j 的分数

@@ -3,8 +3,8 @@
 **重建这两个 C++ 依赖之前**跑一次,重建之后用 test_tokenizer.py 比对。
 顺序反了就失去意义 —— 基线是用来发现"重建把行为改了"的。
 
-    python tests/capture_baseline.py            # 写 tests/fixtures/tokenizer_baseline.json
-    python tests/capture_baseline.py --force    # 覆盖已有基线
+    python test/capture_baseline.py            # 写 test/fixtures/tokenizer_baseline.json
+    python test/capture_baseline.py --force    # 覆盖已有基线
 
 piece 那半是**红线**:编码一旦变了,12536 词表就跟已发布模型的 embedding 错位。
 wapic 那半是**参考**:切词变了只影响 WWM 掩码粒度。
@@ -16,11 +16,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PIECE_MODEL = "tokenizer/piece.model"
-WAPIC_MODEL_CANDIDATES = [
-    "/home/tfbao/Shiyu/Wapic/data/model/wapic-cws.wac",
-    "/home/tfbao/Shiyu/wapic_models_backup/wapic-20260602-h19_1-full.wac",
-]
+sys.path.insert(0, str(ROOT))
+from prepare.pretokenize import default_wapic_model   # noqa: E402
 
 SAMPLES = [
     "人民日报社论:坚持改革开放不动摇",
@@ -40,21 +37,24 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--force", action="store_true", help="覆盖已有基线")
     ap.add_argument("--out", type=Path,
-                    default=ROOT / "tests" / "fixtures" / "tokenizer_baseline.json")
+                    default=ROOT / "test" / "fixtures" / "tokenizer_baseline.json")
     args = ap.parse_args()
 
     if args.out.exists() and not args.force:
         sys.exit(f"{args.out} 已存在。确认要用当前行为覆盖基线再加 --force")
 
     out = {"note": "重建 PieceTokenizer / Wapic 前抓的行为基线,"
-                   "由 tests/test_tokenizer.py 校验。"}
+                   "由 test/test_tokenizer.py 校验。"}
 
     import piece_tokenizer as pt
     tok = pt.Tokenizer()
-    tok.load(str(ROOT / PIECE_MODEL), dict="no")
+    sys.path.insert(0, str(ROOT))
+    from prepare.tokenizer import default_piece_model
+    piece_model = default_piece_model()
+    tok.load(str(piece_model), dict="no")
     allp = " ".join(tok.id_to_piece(i) for i in range(tok.vocab_size()))
     out["piece"] = {
-        "model": PIECE_MODEL,
+        "model": str(piece_model),
         "vocab_size": tok.vocab_size(),
         "vocab_sha256": hashlib.sha256(
             allp.encode("utf-8", "surrogatepass")).hexdigest(),
@@ -62,8 +62,8 @@ def main() -> int:
                      "pieces": tok.encode_as_pieces(s)} for s in SAMPLES],
     }
 
-    wac = next((p for p in WAPIC_MODEL_CANDIDATES if Path(p).exists()), None)
-    if wac is None:
+    wac = str(default_wapic_model())
+    if not Path(wac).exists():
         sys.exit("找不到 .wac 模型,先跑 bash prepare/install_deps.sh wapic")
     import wapic
     seg = wapic.Segmenter(wac)

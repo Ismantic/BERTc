@@ -18,7 +18,7 @@ Absolute, assumed by nearly every script:
 - Python venv: `/home/tfbao/.venv/bin/python` (Python 3.14, torch 2.11+cu13, transformers, vllm). **Use `uv pip install`, not `pip` — there is no `pip` in this venv.**
 - `piece_tokenizer` — built from sibling repo `/home/tfbao/Shiyu/PieceTokenizer` (`pip install -e .`). Loaded via `_PIECE.load(piece_path, dict="no")` (char-mode, no segmentation dict).
 - `wapic` — built from `/home/tfbao/Shiyu/Wapic`. CRF Chinese segmenter for WWM data prep. **API was redesigned in 2026-07**: `cut_smart` → `segment` (mixed CN/EN: whitespace split → EN intact → CN through CRF), `cut` → `segment_raw` (keeps whitespace as tokens); new `word_starts` returns char offsets of word starts, which is what WWM actually needs. Model no longer ships with the repo — download from HF `Ismantic/wapic-cws` to `data/model/wapic-cws.wac` (`bash prepare/install_deps.sh wapic`).
-- **Reinstalling the two C++ deps**: `bash prepare/install_deps.sh`. It rebuilds both and then runs `tests/test_tokenizer.py` against `tests/fixtures/tokenizer_baseline.json`. Capture a fresh baseline with `tests/capture_baseline.py` **before** rebuilding, never after.
+- **Reinstalling the two C++ deps**: `bash prepare/install_deps.sh`. It rebuilds both and then runs `test/test_tokenizer.py` against `test/fixtures/tokenizer_baseline.json`. Capture a fresh baseline with `test/capture_baseline.py` **before** rebuilding, never after.
 - Char-level piece tokenizer: `pretrain/modern_bertc/tokenizer/piece.model` (vocab 12536, pad=12531, mask=12535). Came from the old `bert_train_v6_mid/`; migrated here when Summer/BERT was removed.
 - Baselines & backbones (under `finetune/`):
   - `NLP_BERT_CRF/macbert-large/` (3.8GB, 326M) — MacBERT baseline

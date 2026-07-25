@@ -44,6 +44,16 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "data"))
 import source as corpus                                          # noqa: E402
 
+def default_wapic_model() -> Path:
+    """Wapic 的分词模型。install_deps.sh 把仓库 clone 到 deps/,模型下到它的 data/model/。"""
+    import os
+    env = os.environ.get("BERTC_WAPIC_MODEL")
+    if env:
+        return Path(env)
+    deps = Path(os.environ.get("BERTC_DEPS_DIR", str(ROOT / "deps")))
+    return deps / "Wapic" / "data" / "model" / "wapic-cws.wac"
+
+
 MIN_DOC_CHARS = 30
 MAX_DOC_CHARS = 50_000
 WS_RE = re.compile(r"\s+")
@@ -262,8 +272,8 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument("--num_workers", type=int, default=14)
     p.add_argument("--batch_docs", type=int, default=2048)
     p.add_argument("--chunksize", type=int, default=32)
-    p.add_argument("--wapic_model",
-                   default="/home/tfbao/Shiyu/Wapic/data/model/wapic-cws.wac")
+    p.add_argument("--wapic_model", default=None,
+                   help="默认自动定位 deps/Wapic/data/model/wapic-cws.wac")
     p.add_argument("--piece_model",
                    default=str(ROOT / "tokenizer"
                                / "piece.model"))
@@ -277,6 +287,14 @@ def main() -> None:
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
+    if args.wapic_model is None:
+        args.wapic_model = str(default_wapic_model())
+    if args.piece_model is None:
+        from .tokenizer import default_piece_model
+        args.piece_model = str(default_piece_model())
+    if not Path(args.piece_model).exists():
+        sys.exit(f"找不到词表 {args.piece_model} —— "
+                 f"跑 bash prepare/install_deps.sh piece")
     if not Path(args.wapic_model).exists():
         sys.exit(f"没有分词模型 {args.wapic_model} —— "
                  f"跑 bash prepare/install_deps.sh wapic")

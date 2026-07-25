@@ -1,7 +1,7 @@
 """把 checkpoint 导出成可以直接上传 HF 的发布目录。
 
 发布目录里的推理代码不是模板字符串,而是从 src/ 和 save/assets/ 拷过去的
-**真实文件** —— 所以 tests/test_save.py 能直接 import 它们跑一遍,
+**真实文件** —— 所以 test/test_save.py 能直接 import 它们跑一遍,
 而不是发出去了才发现示例代码根本跑不通。
 
     python -m save.export                       # 全部
@@ -25,7 +25,6 @@ from .releases import ALL, BACKBONES, FINETUNES
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 ASSETS = Path(__file__).resolve().parent / "assets"
-TOKENIZER_DIR = ROOT / "tokenizer"
 DEFAULT_OUT = Path(__file__).resolve().parent / "releases"
 
 
@@ -39,14 +38,13 @@ def _common_assets(out: Path, backbone_dir: Path, extra_code=()) -> None:
     """所有发布目录都要带的东西:骨干定义、tokenizer、config。"""
     _copy(SRC / "model.py", out)
     _copy(ASSETS / "tokenizer.py", out)
-    _copy(TOKENIZER_DIR / "piece.model", out)
+    # 词表来自 PieceTokenizer 仓库,本仓库不留副本;发布包里沿用 piece.model 这个名字
+    sys.path.insert(0, str(ROOT))
+    from prepare.tokenizer import load_tokenizer
+    load_tokenizer().copy_to(out)
     _copy(backbone_dir / "config.json", out)
-    mask_file = backbone_dir / "mask_token_id.txt"
-    if mask_file.exists():
-        _copy(mask_file, out)
-    else:
-        (out / "mask_token_id.txt").write_text(
-            str(json.loads((backbone_dir / "config.json").read_text())["mask_token_id"]))
+    (out / "mask_token_id.txt").write_text(
+        str(json.loads((backbone_dir / "config.json").read_text())["mask_token_id"]))
     for name in extra_code:
         src = (SRC if (SRC / name).exists() else ASSETS) / name
         _copy(src, out)

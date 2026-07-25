@@ -7,10 +7,10 @@
   Wapic           切词变了 → WWM 的词边界跟着变,只影响预训练掩码粒度,
                   不影响词表。所以这里只报告差异,不判失败。
 
-基线由 tests/capture_baseline.py 在重建**之前**抓好,存 tests/fixtures/。
+基线由 test/capture_baseline.py 在重建**之前**抓好,存 test/fixtures/。
 重建后 prepare/install_deps.sh 会自动调本脚本比对。
 
-    python tests/test_tokenizer.py
+    python test/test_tokenizer.py
 """
 import hashlib
 import json
@@ -18,11 +18,9 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BASELINE = ROOT / "tests" / "fixtures" / "tokenizer_baseline.json"
-WAPIC_MODEL_CANDIDATES = [
-    Path("/home/tfbao/Shiyu/Wapic/data/model/wapic-cws.wac"),
-    Path("/home/tfbao/Shiyu/wapic_models_backup/wapic-20260602-h19_1-full.wac"),
-]
+BASELINE = ROOT / "test" / "fixtures" / "tokenizer_baseline.json"
+sys.path.insert(0, str(ROOT))
+from prepare.pretokenize import default_wapic_model   # noqa: E402
 
 
 def check_piece(base: dict) -> int:
@@ -33,7 +31,7 @@ def check_piece(base: dict) -> int:
         return 1
 
     tok = pt.Tokenizer()
-    tok.load(str(ROOT / base["model"]), dict="no")
+    tok.load(base["model"], dict="no")
     failures = 0
 
     if tok.vocab_size() != base["vocab_size"]:
@@ -75,7 +73,9 @@ def check_wapic(base: dict) -> int:
         print(f"  wapic 导入失败:{e}")
         return 1
 
-    model = next((p for p in WAPIC_MODEL_CANDIDATES if p.exists()), None)
+    model = default_wapic_model()
+    if not model.exists():
+        model = None
     if model is None:
         print("  找不到 .wac 模型,跳过。"
               "跑 `bash prepare/install_deps.sh wapic` 从 HF 下载")

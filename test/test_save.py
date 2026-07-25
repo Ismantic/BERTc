@@ -8,7 +8,7 @@
   1. 发布权重与仓库内实现的输出一致(safetensors 转换没丢东西)
   2. 三个任务的推理结果是像样的中文,不是乱码
 
-    python tests/test_save.py
+    python test/test_save.py
 """
 import json
 import subprocess

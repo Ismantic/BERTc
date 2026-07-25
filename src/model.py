@@ -3,7 +3,7 @@
 只依赖 torch。**state_dict 的 key 与 pretrain/modern_bertc/model.py 完全一致**,
 所以 output_v4_large/checkpoint-8500 这类既有权重可以直接加载 —— 改动任何模块名或
 嵌套层级都会让 HF 上已发布的 Ismantic/BERTc-315M 权重失配。
-tests/test_model.py 会拿真实 ckpt 跟旧实现逐值对拍。
+test/test_model.py 会拿真实 ckpt 跟旧实现逐值对拍。
 
 两个已发布规格(都用同一份代码,只是 config 不同):
   BERTc-165M (v4-Mid)   12L / 1024H / 2752I / 16 heads
