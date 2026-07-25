@@ -121,8 +121,8 @@ FINETUNE_SOURCES = {
 }
 
 # CSC 的四个源。逐文件比对确认它们覆盖原 all_pairs.pkl 的全部内容;
-# 早年 csc/data/raw 下的 sighan/ mcsc_full/ lemon_v2/ wang271k_raw/ 都是
-# 这四个源的重复副本,ecspell/ cscd_ime/ 则是当年下载失败留下的 HTML 错误页。
+# 这几个源之间有重叠(比如 CTCDataset 里的 lemon 和 sighan 与别处重复),
+# 合并去重的规则见 data/process_csc.py。
 CSC_SOURCES = {
     "ctc_dataset": Source(
         name="ctc_dataset", kind="github-repo", repo_id="zejunwang1/CTCDataset",

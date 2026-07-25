@@ -3,9 +3,8 @@
 只有 prepare/ 用得到 —— src/ 从头到尾读预编码好的 id,不碰文本,
 所以 PieceTokenizer 不是 src/ 的依赖。
 
-词表不放在本仓库,而是取自 PieceTokenizer 仓库的 save/BERTc-Tokenizer.pt
-(与本仓库以前那份 piece.model 逐字节相同)。这样词表只有一个来源,
-不会出现两边漂移。路径通过已安装的 piece_tokenizer 模块反查,
+词表不放在本仓库,而是取自 PieceTokenizer 仓库的 save/BERTc-Tokenizer.pt ——
+只有一个来源,不会出现两边各存一份、慢慢漂移。路径通过已安装的 piece_tokenizer 模块反查,
 所以 PieceTokenizer clone 在哪都能找到;也可以用 BERTC_PIECE_MODEL 覆盖。
 
   vocab_size() = 12535 是 piece 词表大小
@@ -14,7 +13,6 @@
 
 **必须用 dict="no" 加载**(字模式,不挂分词词典)。挂了词典 SentencePiece
 的 SplitTextCn 行为就跟训练时不一致,编码结果整体偏掉,而且不会报错。
-(参数在 2026-07 的 PieceTokenizer 里从 cn_dict 改名成了 dict。)
 """
 import os
 import shutil

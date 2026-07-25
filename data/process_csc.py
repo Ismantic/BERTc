@@ -1,9 +1,6 @@
 """把 data/downloads/csc/ 下所有 CSC 源统一成 (错句, 正句) 对,去重后写 pkl。
 
-背景:v4-Large CSC SOTA(SIGHAN-15 F1 0.8346)用的 data/derived/csc/all_pairs.pkl
-是当年临时拼的,**生成代码从未进过 git**。这份是补写的可复现版本。
-
-配方是逐文件集合比对反推出来的,三条规则:
+把五个公开源合并成一份训练数据。三条规则:
 
 1. **扫 raw/ 下全部源**,包括两个容易漏的 `.jsonl.gz`
    (CTC2021/train_large_v2 贡献 10.2 万对,Wang271k/data 是全量 26.8 万)
@@ -26,7 +23,7 @@
   - mcsc_* / shibing624 是 CRLF,不 strip 会让 tgt 带 \r
   - mcsc_set 用 {} 标出错误片段,要去掉
   - shibing624/*.tsv 有表头 source/target/type
-  - cscd_ime/ ecspell/ 下是当年下载失败留下的 HTML 错误页,跳过
+  - 下载失败会在目录里留下 HTML 错误页,要能识别并跳过
 
 用法:
     python data/process_csc.py                  # → data/derived/csc/all_pairs.pkl

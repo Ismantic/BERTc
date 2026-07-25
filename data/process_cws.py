@@ -18,8 +18,6 @@ PFR 格式:
 
 产出与 v4-Large MT SOTA 实际训练输入一致:train 102,739 行 / dev 21,143 行。
 
-本文件是 c959c17 死代码清理时误删的 finetune/NLP_BERT_CRF/build_pd1998_jsonl.py,
-解析逻辑原样保留,仅把路径默认值改为走 data/source.py。
 """
 import argparse, json, os, re, sys
 from pathlib import Path

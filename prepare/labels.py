@@ -4,7 +4,6 @@
 标签名会随预编码数据一起写进文件(cws_vocab / pos_vocab / ner_vocab),
 src/evaluate.py 靠这些名字还原出 span,所以顺序不能改。
 
-搬自 finetune/NLP_BERT_CRF/{ltp_label_align,data_pos_ner,data}.py,内容未改。
 """
 
 # ---------------------------------------------------------------- CWS

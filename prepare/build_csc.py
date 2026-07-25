@@ -112,7 +112,6 @@ def main() -> None:
     # 测试集额外存原文。评测要跟标准答案做字符串比对,而 id→字 的往返是有损的
     # (不同的字可能撞到同一个 id,实测 SIGHAN-15 里有 錓→镒、ㄦ→㚖 这类),
     # 拿还原出来的文本当参照会让分数偏高。预测那一侧没有别的办法,只能走还原,
-    # 这跟原实现一致。
     n_bad = sum(1 for s, _ in test_pairs
                 if "".join(id_to_char.get(i, "") for i in tok.encode(s)) != s)
     print(f"测试集 {len(test_pairs)} 条中 {n_bad} 条 id→字 往返不还原,"

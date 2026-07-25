@@ -110,8 +110,6 @@ def worker(text):
         return None
 
     # word_starts 直接给原文里每个词首的字符下标,末尾带一个 len(text) 哨兵。
-    # (旧实现用 cut_smart 拿词串,再想办法把不含空白的结果对回含空白的原文,
-    #  那一段现在不需要了。)
     try:
         starts = _WAPIC.word_starts(text)
     except Exception:                                            # noqa: BLE001

@@ -1,19 +1,18 @@
 """下游任务评测。只依赖 torch。
 
-口径跟重构前一致:
+口径:
   CWS  micro span F1
   POS  per-word 准确率(只在该句 CWS 完全切对时才计入 —— 切错了词,词级 POS 无意义)
   NER  micro span F1
   MT joint score = cws_f1 + 0.3 · pos_acc + 0.2 · ner_f1(选 best.pt 用)
   CSC  pycorrector 口径的句级 P / R / F1(SIGHAN-15 707 条)
 
-CWS / NER 的 span 是直接从 BIES 标签算的,不需要原文 —— 原实现先把标签还原成词串
-再比,但同一句里预测和标准答案的字完全相同,比词串等价于比 (start, end) 区间。
-所以这里不碰文本。
+CWS / NER 的 span 直接从 BIES 标签算,不需要原文:同一句里预测和标准答案的
+字完全相同,比词串等价于比 (start, end) 区间。所以这里不碰文本。
 
 CSC 那条要还原成字符串才能跟 pycorrector 对齐,用的是预编码文件里带的
-id_to_char 表(prepare/ 写入,只覆盖编码时真正出现过的字,跟原实现的
-字符缓存范围一致 —— 表更大会让本该回退成原字的未知 id 变成真解码,口径就偏了)。
+id_to_char 表(prepare/ 写入,只覆盖编码时真正出现过的字 —— 表更大会让本该
+回退成原字的未知 id 变成真解码,口径就偏了)。
 """
 import torch
 from torch.utils.data import DataLoader
@@ -22,8 +21,8 @@ from torch.utils.data import DataLoader
 # ---------------------------------------------------------------- span 工具
 
 def bies_to_spans(tags, cws_vocab: list[str]) -> set:
-    """BIES 标签序列 → {(start, end)}。对不合法序列的处理跟原实现一致:
-    遇到 B / S 就起新词,I / E 一律并入当前词。"""
+    """BIES 标签序列 → {(start, end)}。对不合法序列的处理:遇到 B / S 起新词,
+    I / E 一律并入当前词。"""
     id2tag = cws_vocab
     spans, start = set(), None
     for i, t in enumerate(tags):
@@ -168,7 +167,7 @@ def evaluate_csc(model, dataset, collator, device, id_to_char: dict,
     **参照必须用 src_texts / tgt_texts 里的原文**(prepare/ 写进数据集文件)。
     id→字 的往返是有损的:不同的字可能撞到同一个 id,而且截断会丢尾巴。
     拿还原出来的文本当参照,分数会虚高(实测 SIGHAN-15 上 +0.006)。
-    预测那一侧只能走还原,这跟原实现一致。
+    预测那一侧没有别的办法,只能走还原。
     """
     was_training = model.training
     model.eval()
@@ -176,7 +175,7 @@ def evaluate_csc(model, dataset, collator, device, id_to_char: dict,
                         collate_fn=collator, num_workers=0)
 
     def to_text(ids, fallback):
-        """id → 字。表里没有的 id 保留原字,跟原实现一致。"""
+        """id → 字。表里没有的 id 保留原字。"""
         return "".join(id_to_char.get(int(t), id_to_char.get(int(f), ""))
                        for t, f in zip(ids, fallback))
 

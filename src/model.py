@@ -2,8 +2,7 @@
 
 只依赖 torch。**state_dict 的 key 不能动** —— 改任何模块名或嵌套层级都会让
 HF 上已发布的六个模型权重全部失配,而模型照样能随机初始化跑起来、不报错。
-迁移时拿真实 ckpt 跟重构前的实现逐值对拍过(147 个张量、logits 逐值相等);
-长期回归靠 test/test_reproduce_sota.py。
+改动后跑 test/test_reproduce_sota.py 验证。
 
 两个已发布规格(都用同一份代码,只是 config 不同):
   BERTc-165M (v4-Mid)   12L / 1024H / 2752I / 16 heads

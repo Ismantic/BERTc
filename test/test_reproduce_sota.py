@@ -1,14 +1,13 @@
-"""用新代码复现已记录的 SOTA 数字。
+"""复现 save/sota/README.md 里记录的 SOTA 数字。
 
-这是整个重构最终的正确性依据:前面所有对拍都只证明"新旧实现逐值相等",
-但那是在随机权重或小模型上比的。这里拿**真实的 SOTA checkpoint** +
-prepare/ 产出的真实数据集,跑完整评测,看能不能还原 finetune/sota/README.md
-里记的数。
+改了 src/ 或 prepare/ 之后跑这个 —— 拿**真实的 SOTA checkpoint** 和 prepare/
+产出的真实数据集跑完整评测,对照记录的数字。这是判断有没有改坏的硬标准:
+单元级的对拍只能说明某个函数没写错,说明不了整条链对。
 
     python test/test_reproduce_sota.py            # 两条都跑
     python test/test_reproduce_sota.py --only mt
 
-慢:MT 要在 21,143 句 dev 上解码,CSC 要跑 707 条,单卡几分钟。
+MT 在 dev 前 2000 句上解码,CSC 跑 707 条,单卡几分钟。
 """
 import argparse
 import sys
@@ -29,7 +28,7 @@ DATASETS = ROOT / "prepare" / "datasets"
 SOTA = ROOT / "save" / "sota"
 BACKBONE_LARGE = ROOT / "prepare" / "backbones" / "BERTc-315M"
 
-# finetune/sota/README.md 记录的数
+# save/sota/README.md 记录的数
 EXPECT_MT = {"cws_f1": 0.9840, "pos_acc": 0.9800, "ner_f1": 0.9660, "score": 1.4712}
 EXPECT_CSC_F1 = 0.8346
 TOL = 0.005          # 允许的偏差
