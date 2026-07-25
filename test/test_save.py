@@ -48,12 +48,24 @@ def check_weights(name: str, spec: dict) -> int:
     folder = RELEASES / name
     ckpt_path = Path(spec["checkpoint"])
     if ckpt_path.is_dir():
-        blob = torch.load(ckpt_path / "model.pt", map_location="cpu",
-                          weights_only=False)
-        src = blob.get("ema") or blob["model"]
-    else:
+        # 骨干:预训练产出(model.pt)或从 HF 下的发布包(model.safetensors)
+        sys.path.insert(0, str(ROOT))
+        from src.checkpoint import load_safetensors
+        pt, st = ckpt_path / "model.pt", ckpt_path / "model.safetensors"
+        if pt.exists():
+            blob = torch.load(pt, map_location="cpu", weights_only=False)
+            src = blob.get("ema") or blob["model"]
+        elif st.exists():
+            src = load_safetensors(st)
+        else:
+            print(f"  - {name}: 源 {ckpt_path} 里没有权重,跳过忠实性检查")
+            return 0
+    elif ckpt_path.exists():
         blob = torch.load(ckpt_path, map_location="cpu", weights_only=False)
         src = blob.get("model", blob)
+    else:
+        print(f"  - {name}: 源 {ckpt_path.name} 不存在,跳过忠实性检查")
+        return 0
     rel = load_file(str(folder / "model.safetensors"))
 
     # cor_head.weight 与 embed 绑权重,safetensors 不重复存,加载时重新绑

@@ -7,10 +7,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# 骨干权重的来源。自己预训练的话指向 prepare/output/<名字>/checkpoint-8500;
+# 只想重新导出已发布模型的话,先把它下下来:
+#   huggingface-cli download Ismantic/BERTc-315M --local-dir models/BERTc-315M
+MODELS = Path(__file__).resolve().parents[1] / "models"
+
 # 骨干:预训练产出,可继续微调
 BACKBONES = {
     "BERTc-165M": {
-        "checkpoint": ROOT / "prepare" / "backbones" / "BERTc-165M",
+        "checkpoint": MODELS / "BERTc-165M",
         "params": "165M",
         "arch": "12L / 1024H / 2752I / 16 heads",
         "mt": "score 1.4689(CWS 0.9836 / POS 0.9753 / NER 0.9632)",
@@ -18,7 +23,7 @@ BACKBONES = {
         "notes": "首个在 165M 规模同时拿到 MT / CSC SOTA 的 Modern BERTc 骨干。",
     },
     "BERTc-315M": {
-        "checkpoint": ROOT / "prepare" / "backbones" / "BERTc-315M",
+        "checkpoint": MODELS / "BERTc-315M",
         "params": "315M",
         "arch": "24L / 1024H / 2752I / 16 heads",
         "mt": "score 1.4712(CWS 0.9840 / POS 0.9800 / NER 0.9660)",
