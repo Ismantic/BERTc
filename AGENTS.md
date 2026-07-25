@@ -1,31 +1,60 @@
-# Repository Guidelines
+# 仓库约定
 
-## Project Structure & Module Organization
+字级中文 Modern BERT 的预训练与微调。详细说明见 [`CLAUDE.md`](CLAUDE.md),
+这里只列日常需要的。
 
-BERTc is organized around three experiment workstreams. `pretrain/` contains legacy char-level BERTc pretraining plus the current Modern BERTc code in `pretrain/modern_bertc/`; tokenizer assets live under `pretrain/modern_bertc/tokenizer/`. `finetune/` contains CWS/POS/NER fine-tuning, with the migrated main code in `finetune/NLP_BERT_CRF/` and SOTA notes/checkpoint pointers in `finetune/sota/`. `csc/` contains Chinese spelling correction training, evaluation, and baselines under `csc/train/`, `csc/eval/`, and `csc/baseline/`. Large local data, checkpoints, and generated outputs are intentionally excluded from git.
+## 结构
 
-## Build, Test, and Development Commands
+```
+data/       下载 + 加工。source.py 是数据源注册表
+src/        模型 + 训练。只依赖 torch,且不碰文本
+prepare/    编排:词表、预编码、语料切块、调训练
+save/       导出 HF 发布包 + 上传
+deps/ docs/ test/
+```
 
-Use the project venv at `/home/tfbao/.venv/bin/python`; install dependencies with `uv pip install`, not `pip`.
+**只依赖 Hugging Face 和 GitHub。** 加数据源必须登记公开出处,不要指向本机
+既有目录 —— 一旦允许"本地有就跳过下载",别人克隆下来跑不通而自己发现不了。
 
-- `bash pretrain/modern_bertc/run_v3.sh`: launch Modern BERTc pretraining.
-- `bash pretrain/inline_eval_modern_both.sh <ckpt_dir>`: run CWS and CSC inline evaluation for a checkpoint.
-- `cd finetune/NLP_BERT_CRF && python train_mt.py --backbone_path ../backbones/bert_train_v7_mid --alpha_pos 2.0 --beta_ner 0.5 --fgm --fgm_eps 1.0 --epochs 5 --batch_size 64`: run joint CWS/POS/NER fine-tuning.
-- `bash csc/train/chain_csc_experiments.sh`: run CSC experiment chain.
-- `python csc/eval/threshold_sweep.py --ckpt <path>`: tune CSC detection threshold.
+## 常用命令
 
-## Coding Style & Naming Conventions
+```bash
+bash prepare/install_deps.sh            # clone + 编译 PieceTokenizer / Wapic
+python data/download.py --list          # 数据源状态
+python -m prepare.fetch_backbone        # 从 HF 拉骨干
+bash prepare/run_v4_large.sh finetune   # MT + CSC 微调
+python test/test_reproduce_sota.py      # 复现 MT 1.4712 / CSC 0.8346
+```
 
-Python is the primary language. Follow existing style: 4-space indentation, snake_case for functions and files, lowercase experiment script names, and explicit CLI arguments via `argparse`. Keep experiment outputs in `output_*`, `data/`, or checkpoint directories that stay out of git. Prefer extending existing scripts over adding parallel entry points.
+训练脚本用 `-m` 从仓库根目录跑(`src/` 是 package,内部相对 import):
 
-## Testing Guidelines
+```bash
+python -m src.pretrain --train_data ... --output_dir ...
+```
 
-There is no separate unit-test suite; validation is benchmark-driven. For CSC, use `csc/eval/eval_pycorrector_baseline.py` and the canonical SIGHAN-15 707-sample pycorrector protocol. For Modern BERTc checkpoints, use `pretrain/inline_eval_modern_both.sh <ckpt_dir>`. Report the exact checkpoint, command, threshold, and metrics when changing training or evaluation code.
+## 环境
 
-## Commit & Pull Request Guidelines
+`/home/tfbao/.venv/bin/python`,**用 `uv pip install`,没有 pip**。
+单张 RTX 4090,没有多卡代码路径。
 
-Recent commits use short, result-oriented subjects, often bilingual Chinese/English, such as `README: 更新到 v4-Large Modern BERTc SOTA` or `CSC SOTA: ...`. Keep commits scoped to one experiment, fix, or documentation update. Pull requests should include the motivation, changed scripts, commands run, key metrics, and any required external paths or checkpoint assumptions. Do not commit large model/data artifacts.
+## 代码风格
 
-## Security & Configuration Tips
+4 空格缩进,snake_case,CLI 参数走 `argparse`。注释解释**为什么**,不复述
+代码在做什么;把踩过的坑写下来(哪种写法会静默出错),这比描述控制流有用。
+优先扩展现有脚本,不要新开平行入口。
 
-Many scripts assume local absolute paths for `PieceTokenizer`, `Wapic`, corpora, and checkpoints. Document any new path assumptions in README-style notes, keep secrets out of scripts, and avoid modifying benchmark ground-truth files to improve reported numbers.
+## 测试
+
+没有单元测试套件,靠基准驱动。改了 `src/` 或 `prepare/` 就跑
+`python test/test_reproduce_sota.py` —— 它拿真 checkpoint 复现已记录的数字,
+是唯一的硬标准。报告结果时带上 checkpoint、命令、指标。
+
+不要为了让数字好看去改评测代码。
+
+## 提交
+
+短标题,说清结果。commit message **不要带 `Co-Authored-By: Claude ...`**
+或任何 AI 署名。一次提交只做一件事。大文件不进 git。
+
+删目录前先 `du -sh` 看看里面有没有 gitignored 的数据 —— `git ls-files`
+看不到的东西才是危险的。

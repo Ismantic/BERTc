@@ -1,126 +1,103 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working in this repository.
+给 Claude Code 的项目说明。这些约定优先于默认行为。
 
-## What this project is
+## 这是什么
 
-**BERTc** is a char-level Chinese BERT-mid (165M, 12L/1024H) trained **from scratch** plus its modern successor. Three workstreams under one repo:
+BERTc:字级中文 Modern BERT,从零预训练,纯 PyTorch。已发布
+`Ismantic/BERTc-{165M,315M}` 及其 MT / CSC 微调版共六个 HF 仓库。
 
-1. **Char-level BERTc (legacy, v4→v7)** — `pretrain/` + `finetune/NLP_BERT_CRF/`. Standard BERT pre-norm + char-level piece tokenizer (vocab 12536). Goal: beat `hfl/chinese-roberta-wwm-ext` (102M) and `hfl/chinese-macbert-large` (326M) on PD-1998 CWS / POS / NER. Current SOTA: `v6.5+FGM 5ep` MT joint (see `finetune/sota/README.md`).
+**核心约束:整个仓库只依赖 Hugging Face 和 GitHub。** 语料、标注数据、词表、
+C++ 依赖全部可从公网重建,不允许指向本机既有目录。加新数据源时必须登记公开
+出处;找不到出处的宁可不用,也不要引入本地文件。
 
-2. **Modern BERTc (current, v3)** — `pretrain/modern_bertc/`. ModernBERT-aligned redesign: 22L/768H/1152I (~120M), LayerNorm no-bias, RoPE, GeGLU, Megatron init, StableAdamW, Damped Cosine LR, Dynamic MLM curriculum, `flex_attention` with cross-doc isolation. Same piece tokenizer (12536). Target: surpass `v7+FGM` SOTA and close the gap to RoBERTa-wwm-large on a smaller param budget.
-
-3. **BERTc-CSC** — `csc/`. Chinese Spelling Correction (dual-head: MLM correction + focal detection). Production user: the `Sime` input-method project. Best so far: MacBERT-large baseline 0.8309 F1; BERTc-v7 stuck at 0.7994; goal of v3 backbone is to push BERTc-CSC ≥ 0.83.
-
-## Environment & external paths
-
-Absolute, assumed by nearly every script:
-- Python venv: `/home/tfbao/.venv/bin/python` (Python 3.14, torch 2.11+cu13, transformers, vllm). **Use `uv pip install`, not `pip` — there is no `pip` in this venv.**
-- `piece_tokenizer` — built from sibling repo `/home/tfbao/Shiyu/PieceTokenizer` (`pip install -e .`). Loaded via `_PIECE.load(piece_path, dict="no")` (char-mode, no segmentation dict).
-- `wapic` — built from `/home/tfbao/Shiyu/Wapic`. CRF Chinese segmenter for WWM data prep. **API was redesigned in 2026-07**: `cut_smart` → `segment` (mixed CN/EN: whitespace split → EN intact → CN through CRF), `cut` → `segment_raw` (keeps whitespace as tokens); new `word_starts` returns char offsets of word starts, which is what WWM actually needs. Model no longer ships with the repo — download from HF `Ismantic/wapic-cws` to `data/model/wapic-cws.wac` (`bash prepare/install_deps.sh wapic`).
-- **Reinstalling the two C++ deps**: `bash prepare/install_deps.sh`. It rebuilds both and then runs `test/test_tokenizer.py` against `test/fixtures/tokenizer_baseline.json`. Capture a fresh baseline with `test/capture_baseline.py` **before** rebuilding, never after.
-- Char-level piece tokenizer: `pretrain/modern_bertc/tokenizer/piece.model` (vocab 12536, pad=12531, mask=12535). Came from the old `bert_train_v6_mid/`; migrated here when Summer/BERT was removed.
-- Baselines & backbones (under `finetune/`):
-  - `NLP_BERT_CRF/macbert-large/` (3.8GB, 326M) — MacBERT baseline
-  - `NLP_BERT_CRF/roberta-wwm-ext/` (1.2GB, 102M) — RoBERTa baseline
-  - `backbones/bert_train_v7_mid/` (317MB) — char BERTc v7 backbone (CSC + comparison)
-  - `backbones/bert_train_v6_5_mid/` (633MB) — char BERTc v6.5 backbone (MT SOTA backbone)
-- Pretraining corpora live on `a6000/` (external SSD): SkyPile, CCI3-HQ, Chinese-FineWeb-Edu, Wikipedia_{cn,en}. PeopleDaily on `/home/tfbao/Shiyu/Data/`.
-- **`.gitignore` excludes**: `data/`, `output_*/`, `*.pt`, `*.pt.wid`, `*.pt.seg`, `*.bin`, `*.safetensors`, `*.parquet`, `*.wac`, `bert_train*/`, `*_init*/`. Big files stay on disk but never enter git.
-
-## Workstream layout
+## 四层结构
 
 ```
-pretrain/
-├── modern_bertc/              # **current**: Modern BERTc v3 (ModernBERT-aligned)
-│   ├── model.py               # 22L/768H + flex_attention + cross-doc isolation
-│   ├── train_modern.py        # StableAdamW + Damped Cosine + Dynamic MLM
-│   ├── pretokenize_modern.py  # writes .pt/.pt.wid/.pt.seg (uint8 doc ids)
-│   ├── run_v3.sh              # entry point: batch=32, accum=8, 111K steps
-│   ├── eval_modern_{cws,csc}.py  # inline-eval probes
-│   ├── tokenizer/             # piece.model + mask_token_id.txt (vocab 12536)
-│   ├── data3/                 # current 20B-target pretokenized corpus
-│   └── output_v*/             # checkpoints
-├── train_bert_mlm.py          # legacy char-BERTc trainer (v4–v7)
-├── aurora.py / muon.py        # legacy optimizers (Modern BERTc uses StableAdamW)
-├── inline_eval_modern_{both,cws,csc}.sh  # called by train_modern.py at each save
-├── inline_track{,_csc}.tsv    # legacy inline-eval logs (v7 era)
-└── CORPUS.md                  # corpus & mixing notes
-
-finetune/
-├── NLP_BERT_CRF/              # migrated from Summer/BERT/NLP_BERT_CRF/
-│   ├── train.py / train_mt.py # single-task / joint CWS+POS+NER
-│   ├── data*.py / model*.py
-│   ├── piece_tokenizer_adapter.py  # HF-compatible shim over piece_tokenizer
-│   ├── macbert-large/ roberta-wwm-ext/  # HF baselines
-│   └── data/                  # PD-1998 jsonl + LTP distilled labels
-├── backbones/
-│   ├── bert_train_v7_mid/     # char BERTc v7 (used by csc/)
-│   └── bert_train_v6_5_mid/   # char BERTc v6.5 (MT SOTA backbone)
-├── sota/                      # hardlinked SOTA + secondbest checkpoints
-│   ├── README.md              # **the source of truth for SOTA numbers**
-│   ├── sota_mt_v65_fgm_5ep_best.pt      # MT joint SOTA: score 1.4636
-│   ├── sota_cws_v6_fgm_5ep_best.pt      # CWS SOTA: clean F1 0.9819
-│   ├── secondbest_mt_v65_3ep_best.pt    # MT v65 no-FGM (FGM ablation)
-│   └── secondbest_mt_macbert_3ep_best.pt# MT MacBERT (ceiling)
-└── (other legacy chain_*.sh / eval_*.py with broken Summer/BERT paths — historical)
-
-csc/
-├── train/
-│   ├── train_csc.py            # BERTc dual-head (cor + det focal)
-│   ├── train_csc_hf.py         # HF version (RoBERTa / MacBERT)
-│   └── chain_csc_experiments.sh
-├── eval/
-│   ├── threshold_sweep.py      # detection-threshold tuning
-│   ├── eval_pycorrector_baseline.py  # SIGHAN-15 official 707 test
-│   └── eval_ctc.py
-├── baseline/                   # pycorrector MacBERT4CSC CPU run
-└── output_*/                   # 13GB of CSC fine-tune checkpoints
+data/       下载 + 加工。source.py 是数据源注册表,唯一的真相来源
+src/        模型 + 训练。**只依赖 torch**
+prepare/    编排:词表、预编码、语料切块、调训练
+save/       导出 HF 发布包 + 上传;save/sota/ 存 SOTA checkpoint
 ```
 
-## Commands
+外加 `deps/`(clone 的 C++ 依赖,gitignore)、`docs/`、`test/`。
+
+两条分层约束,改代码时不要破坏:
+
+- **`src/` 只依赖 torch**。CRF、StableAdamW、LR 调度都是自己实现的
+  (替掉 torchcrf / optimi / transformers),memmap 用 `torch.from_file`。
+  加依赖前先想能不能放 `prepare/`。
+- **`src/` 不碰文本**。分词、字→id、标签构造全在 `prepare/`,`src/` 只读
+  预编码好的 id。所以 PieceTokenizer 不是 `src/` 的依赖。
+
+`src/` 是 package,模块间用相对 import。训练脚本要用 `-m` 从仓库根目录跑:
 
 ```bash
-# --- Modern BERTc v3 (current) ---
-bash pretrain/modern_bertc/run_v3.sh         # full training (3–5 days on 1× 4090)
-# Single-GPU only — there is no DDP wrap. eff_batch=256 via grad_accum=8.
-
-# --- Legacy char-BERTc MT / CWS training ---
-cd finetune/NLP_BERT_CRF
-python train_mt.py --backbone_path ../backbones/bert_train_v7_mid \
-                   --alpha_pos 2.0 --beta_ner 0.5 --fgm --fgm_eps 1.0 \
-                   --epochs 5 --batch_size 64
-
-# --- BERTc-CSC ---
-bash csc/train/chain_csc_experiments.sh      # 4-way (BERTc / RoBERTa / MacBERT / dual)
-python csc/eval/threshold_sweep.py --ckpt <path>
-
-# --- Inline eval at each ckpt save (called by train_modern.py) ---
-bash pretrain/inline_eval_modern_both.sh <ckpt_dir>   # runs cws + csc, ~30 min
+python -m src.pretrain / src.finetune_mt / src.finetune_csc
 ```
 
-## Critical conventions
+## 环境
 
-- **GPU is 1× RTX 4090 (24GB, bf16).** There is no DDP / multi-GPU code path. Older `train_bert_mlm.py` references 2× A6000 in comments — that machine is gone.
-- **Modern BERTc v1 (RMSNorm + 12L/1024H) and v3 (LayerNorm no-bias + 22L/768H) checkpoints are NOT interchangeable** — the state-dict keys diverge (RMSNorm vs LayerNorm, embed_norm/skip_first_prenorm only in v3). Eval scripts auto-detect via `config.json` but `--init_from_ckpt` across architectures will fail.
-- **`flex_attention` must be `torch.compile`-wrapped** to get FlashAttention speed; `model.py` already does this at module import. Calling raw `flex_attention` produces an unfused materialized-scores kernel (warning emitted) and is ~3× slower.
-- **Pretokenize must write `.seg` alongside `.pt` / `.pt.wid`** for cross-doc attention isolation. `--no_cross_doc_isolation` falls back to SDPA + plain pad mask (also slower because non-trivial attn_mask falls off the flash kernel).
-- **Wapic `segment_raw` mangles English** (whitespace becomes tokens). Use `segment` (formerly `cut_smart`), which whitespace-splits first, keeps EN segments intact, and runs CRF only on CN. Wapic installs non-editable, so **rebuilding the repo does not update the venv** — always go through `prepare/install_deps.sh`.
-- **WWM word boundaries changed on 2026-07-25.** v4-Mid / v4-Large (the published `Ismantic/BERTc-165M` / `-315M`) were pretokenized with the older Wapic code + `wapic-20260602-h19_1-full.wac` (backed up under `/home/tfbao/Shiyu/wapic_models_backup/`). The current code + `wapic-cws.wac` differ: on PD-1998 dev, 26.1% of sentences get at least one boundary change (word-level F1 0.9910), plus EN punctuation and symbol runs now split differently. This only affects MLM masking granularity — vocab and published weights are untouched — but pretraining is **no longer bit-reproducible** against v4. Accepted deliberately; do not "fix" it by pinning the old model.
-- **`dict.txt` is NOT used by the BERTc piece tokenizer** (char-mode loads with `dict="no"`). It is only needed by the Summer ReTok piece tokenizer.
-- **Eval ground truth: do not edit `eval_modern_*.py`, `threshold_sweep.py`, `eval_pycorrector_baseline.py` to make numbers look better.** SIGHAN-15 test (707 samples, pycorrector vendored) is the canonical CSC benchmark.
-- **`gsm8k` and other arithmetic benchmarks are not measured here** — that was a Qwen ReTok concern (sibling project `Summer/`); BERTc is encoder-only.
-- **Commit messages must NOT contain a `Co-Authored-By: Claude ...` trailer** (nor any other AI-attribution footer). This overrides the default Claude Code commit convention.
+- venv:`/home/tfbao/.venv/bin/python`(Python 3.14,torch 2.11+cu13)。
+  **用 `uv pip install`,这个 venv 里没有 pip。**
+- GPU:单张 RTX 4090(24GB,bf16)。**没有多卡代码路径。**
+- 两个 C++ 依赖用 `bash prepare/install_deps.sh` 装,会 clone 到 `deps/`:
+  - **PieceTokenizer** 提供字级分词器**和词表**。词表是
+    `deps/PieceTokenizer/save/BERTc-Tokenizer.pt`,通过 `piece_tokenizer.__file__`
+    反查定位,本仓库不留副本。加载必须传 `dict="no"`(字模式)。
+  - **Wapic** 是 CRF 分词器,只在预训练做整词掩码时用。模型从 HF
+    `Ismantic/wapic-cws` 下到 `deps/Wapic/data/model/wapic-cws.wac`。
+    用 `segment`(不是 `segment_raw`,后者把空白也当 token);
+    `word_starts` 直接给词首字符偏移,做 WWM 最省事。
 
-## Migration history (what you should know)
+## 不能改错的地方
 
-- This repo was carved out of `Summer/BERT/` over multiple sessions. Summer/BERT/ has been **deleted** (commit `116dbf4` in `Summer`); all code/data the BERTc workstreams need is now under `BERTc/` (verified via path grep — see `2026-06-02` session).
-- The Summer/BERT-path-broken historical scripts were **deleted** (2026-07-25 dead-code cleanup): the `finetune/` top-level duplicate set (23 files, all byte-identical twins of `finetune/NLP_BERT_CRF/` copies), plus `pretrain/{chain_v6_anneal.sh,pretokenize_v6_anneal.py}` and 10 broken NLP_BERT_CRF comparison scripts (`chain_mt_v2.sh`, `chain_mt_backbones.sh`, `super_mt_chain.sh`, `case_{cws,pos}_analysis.py`, `clean_cws_jsonl.py`, `check_cws_artifacts.py`, `compare_5way.py`, `eval_cws_micro_batch.py`, `build_pd1998_jsonl.py`). They hard-coded the deleted `Summer/BERT/...` paths and no longer ran; recover from git history if a past chain must be re-run.
-- The two Modern BERTc data attempts before v3:
-  - `data/` was buggy (wapic `cut` over EN); deleted.
-  - `data2/` was correct cut_smart but no `.seg` (no cross-doc isolation); kept as backup; may be deleted later.
-  - `data3/` is the current good one (cut_smart + .seg).
+- **`src/model.py` 的 state_dict key 不能动**。改模块名或嵌套层级会让已发布的
+  六个 HF 模型权重全部失配,而模型照样能随机初始化跑起来、不报错。
+- **CSC 的纠错头必须与词嵌入绑权重**(`cor_head.weight = bert.embed.weight`)。
+  预训练的 MLM 头就是 `h @ embed.weightᵀ`,换独立 Linear 会废掉这层对齐,
+  F1 差 0.05。
+- **CSC 评测的参照必须用原文**,不能从 id 还原。字级 tokenizer 多对一
+  (`撘/檡/暸` 都是 id 233),SIGHAN-15 的 707 条里有 16 条还原不回去,
+  拿还原文本当参照 F1 会虚高 0.006。`prepare/build_csc.py` 把原文写进测试集
+  文件,`src/evaluate.py` 用它。
+- **CSC 的 `det_labels` 按字比对,不能按 id**。理由同上,按 id 会漏掉错字。
+- **CSC 的 `correct()` 只用纠错头,不用检测头**。检测头是训练时的辅助信号,
+  这跟训出 0.8346 的口径一致,别"顺手"改成用 det 过滤。
+- **预训练语料不能逐字编码**。字模式下 tokenizer 只对中文一字一 token,
+  英文单词整体成一个 piece、空格成 `▁`。`prepare/pretokenize.py` 整串编码后
+  按字符游标把 piece 对回原文才能拿到词边界。
+- **`torch.from_file` 必须 `shared=True`**。`shared=False` 要私有副本,
+  70GB 语料直接 `Cannot allocate memory`。
+- **MT 的指标口径是 dev 前 2000 句**(`--dev_limit 2000`),不是全量 21,143 句。
+  全量上是 0.9790 / 0.9787 / 0.9597 / 1.4646。
+- **`flex_attention` 必须 `torch.compile` 包**,`model.py` 在模块导入时已经做了。
+  裸调会走未融合的核,慢约 3 倍。
+- **不要为了让数字好看去改评测代码**。SIGHAN-15 官方 707 条是 CSC 的权威基准。
 
-## Autonomous-loop guidance
+## 测试
 
-If asked to "iterate on Modern BERTc Phase 2" / "run the loop": this repo has no `program.md` yet. Modern BERTc v3 is itself the first non-trivial run; only consider Phase-2 search after seeing v3's downstream numbers (CWS / CSC inline-eval over 11 checkpoints). Until then, **finish v3 and report numbers** rather than spawning new experiments.
+```bash
+python test/test_reproduce_sota.py   # 拿真 checkpoint 复现 MT 1.4712 / CSC 0.8346
+python test/test_save.py             # 发布目录能否独立跑
+python test/test_tokenizer.py        # C++ 依赖重建后行为有没有变
+python test/test_crf.py              # vs torchcrf(软依赖,没装就跳过)
+python test/test_optim.py            # vs optimi + transformers
+```
+
+`test_reproduce_sota.py` 是**长期回归防线** —— 它不依赖任何旧代码,只依赖
+`save/sota/` 的 checkpoint 和记录的数字。改动 `src/` 或 `prepare/` 之后跑它,
+数字不对就是改坏了。
+
+重建 PieceTokenizer / Wapic **之前**要先 `python test/capture_baseline.py`
+抓基线,顺序反了就失去意义 —— 基线是用来发现"重建把行为改了"的。
+
+## 提交
+
+commit message 不要带 `Co-Authored-By: Claude ...`(或任何 AI 署名),
+这条覆盖 Claude Code 的默认约定。
+
+**删目录之前先确认里面有没有 gitignored 的数据。** 2026-07-25 删旧目录时
+连带删掉了 `csc/data/`(CSC 原始数据)和 158GB 预处理语料 —— 已发布权重和
+SOTA checkpoint 因为提前 `git mv` 走了才幸免。教训是:`git ls-files` 看不到
+的东西才是危险的,先 `du -sh` 每个子目录。
