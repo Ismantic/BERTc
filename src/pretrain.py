@@ -27,12 +27,11 @@ from pathlib import Path
 import torch
 from torch.utils.data import DataLoader
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from data import PackedMLMDataset                                   # noqa: E402
-from masking import (mlm_mask_batch, mlm_mask_batch_wwm,            # noqa: E402
+from .data import PackedMLMDataset                                   # noqa: E402
+from .masking import (mlm_mask_batch, mlm_mask_batch_wwm,            # noqa: E402
                      dynamic_mlm_prob)
-from model import ModernBertConfig, ModernBertForMLM                # noqa: E402
-from optim import StableAdamW, damped_cosine_lr, current_grad_accum  # noqa: E402
+from .model import ModernBertConfig, ModernBertForMLM                # noqa: E402
+from .optim import StableAdamW, damped_cosine_lr, current_grad_accum  # noqa: E402
 
 
 class EMA:

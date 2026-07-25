@@ -12,8 +12,8 @@ from pathlib import Path
 import torch
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "src"))
-import masking as new_masking                                    # noqa: E402
+sys.path.insert(0, str(ROOT))
+from src import masking as new_masking                                    # noqa: E402
 
 
 def load_old():

@@ -25,11 +25,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from data import CSCDataset, CSCCollator                          # noqa: E402
-from evaluate import evaluate_csc                                 # noqa: E402
-from model import ModernBertConfig, ModernBertModel               # noqa: E402
-from optim import linear_schedule_with_warmup                     # noqa: E402
+from .data import CSCDataset, CSCCollator                          # noqa: E402
+from .evaluate import evaluate_csc                                 # noqa: E402
+from .model import ModernBertConfig, ModernBertModel               # noqa: E402
+from .optim import linear_schedule_with_warmup                     # noqa: E402
 
 
 class ModernBertCSC(nn.Module):

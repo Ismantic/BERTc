@@ -11,8 +11,8 @@ from pathlib import Path
 
 import torch
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from optim import StableAdamW as MyOpt, linear_schedule_with_warmup   # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from src.optim import StableAdamW as MyOpt, linear_schedule_with_warmup   # noqa: E402
 
 try:
     from optimi import StableAdamW as RefOpt

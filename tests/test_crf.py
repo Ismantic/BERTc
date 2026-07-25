@@ -10,8 +10,8 @@ from pathlib import Path
 
 import torch
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-from crf import CRF as MyCRF                                     # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from src.crf import CRF as MyCRF                                     # noqa: E402
 
 try:
     from torchcrf import CRF as RefCRF

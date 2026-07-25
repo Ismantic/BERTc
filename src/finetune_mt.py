@@ -13,7 +13,6 @@ recipe:骨干 lr 2e-5 / 头 lr 5e-4、α_pos=2.0、β_ner=0.5、FGM ε=1.0、5 e
 """
 import argparse
 import json
-import sys
 import time
 from pathlib import Path
 
@@ -23,12 +22,11 @@ import torch.nn.functional as F
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from crf import CRF                                              # noqa: E402
-from data import MTDataset, MTCollator                           # noqa: E402
-from evaluate import evaluate_mt                                 # noqa: E402
-from model import ModernBertConfig, ModernBertModel              # noqa: E402
-from optim import linear_schedule_with_warmup                    # noqa: E402
+from .crf import CRF                                              # noqa: E402
+from .data import MTDataset, MTCollator                           # noqa: E402
+from .evaluate import evaluate_mt                                 # noqa: E402
+from .model import ModernBertConfig, ModernBertModel              # noqa: E402
+from .optim import linear_schedule_with_warmup                    # noqa: E402
 
 
 class ModernBertMT(nn.Module):

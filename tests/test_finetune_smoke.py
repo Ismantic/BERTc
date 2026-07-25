@@ -33,8 +33,8 @@ TINY = dict(vocab_size=12536, hidden_size=128, num_hidden_layers=2,
 
 def make_backbone(dst: Path) -> Path:
     """造一个随机初始化的小骨干 ckpt,格式跟 pretrain.py 存的一致。"""
-    sys.path.insert(0, str(ROOT / "src"))
-    from model import ModernBertConfig, ModernBertForMLM
+    sys.path.insert(0, str(ROOT))
+    from src.model import ModernBertConfig, ModernBertForMLM
     cfg = ModernBertConfig(**TINY)
     model = ModernBertForMLM(cfg)
     dst.mkdir(parents=True, exist_ok=True)
@@ -166,7 +166,7 @@ def main() -> int:
 
         print("\n=== MT ===")
         mt = build_mt_data(tmp)
-        code, log = run([PY, str(ROOT / "src" / "finetune_mt.py"),
+        code, log = run([PY, "-m", "src.finetune_mt",
                          "--ckpt_dir", str(backbone),
                          "--train_data", str(mt["train"]),
                          "--dev_data", str(mt["dev"]),
@@ -184,7 +184,7 @@ def main() -> int:
 
         print("\n=== CSC ===")
         csc = build_csc_data(tmp)
-        code, log = run([PY, str(ROOT / "src" / "finetune_csc.py"),
+        code, log = run([PY, "-m", "src.finetune_csc",
                          "--ckpt_dir", str(backbone),
                          "--train_data", str(csc["train"]),
                          "--test_data", str(csc["test"]),

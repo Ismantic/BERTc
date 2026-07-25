@@ -18,8 +18,8 @@ from pathlib import Path
 import torch
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "src"))
-import model as new_model                                       # noqa: E402
+sys.path.insert(0, str(ROOT))
+from src import model as new_model                                       # noqa: E402
 
 sys.path.insert(0, str(ROOT / "pretrain" / "modern_bertc"))
 try:
