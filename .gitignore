@@ -5,6 +5,9 @@ csc/data/
 finetune/NLP_BERT_CRF/data/
 pretrain/modern_bertc/data/
 pretrain/modern_bertc/data[0-9]/
+prepare/datasets/
+prepare/corpus/
+prepare/output/
 output/
 output_*/
 logs/
