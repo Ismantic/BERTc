@@ -17,7 +17,6 @@ bash prepare/run_v4_large.sh finetune        # MT + CSC 微调
 
 ```
 install_deps.sh   clone + 编译安装 PieceTokenizer / Wapic,装完自动跑行为校验
-fetch_backbone.py HF 发布包 → 微调脚本认的 model.pt
 tokenizer.py      PieceTokenizer 适配:字→id 缓存、id→字 反查表
 labels.py         CWS / POS / NER 标签表,PD-1998 → LTP 的词性与实体映射
 pack.py           预编码数据的打包格式(扁平数组 + offsets)

@@ -61,7 +61,7 @@ step_pretrain() {
 }
 
 step_finetune() {
-    local ckpt="${CKPT:-$BACKBONE/checkpoint-8500}"
+    local ckpt="${CKPT:-$BACKBONE/checkpoint-8500}"   # 也可指向 HF 发布包目录
     [[ -d "$ckpt" ]] || { echo "没有 $ckpt,先跑 pretrain"; exit 1; }
 
     log "MT 微调(CWS + POS + NER)"

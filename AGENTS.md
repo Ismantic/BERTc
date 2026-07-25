@@ -21,7 +21,7 @@ deps/ docs/ test/
 ```bash
 bash prepare/install_deps.sh            # clone + 编译 PieceTokenizer / Wapic
 python data/download.py --list          # 数据源状态
-python -m prepare.fetch_backbone        # 从 HF 拉骨干
+huggingface-cli download Ismantic/BERTc-315M --local-dir models/BERTc-315M
 bash prepare/run_v4_large.sh finetune   # MT + CSC 微调
 python test/test_reproduce_sota.py      # 复现 MT 1.4712 / CSC 0.8346
 ```

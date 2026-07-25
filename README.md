@@ -112,8 +112,8 @@ python data/process_cws.py && python data/process_csc.py
 python -m prepare.build_mt && python -m prepare.build_csc
 
 # 从 HF 拉骨干做微调(不用预训练)
-python -m prepare.fetch_backbone
-bash prepare/run_v4_large.sh finetune
+huggingface-cli download Ismantic/BERTc-315M --local-dir models/BERTc-315M
+CKPT=models/BERTc-315M bash prepare/run_v4_large.sh finetune
 
 # 从零预训练(单张 4090 约 3-5 天)
 python data/download.py --pretrain && python data/process.py --all

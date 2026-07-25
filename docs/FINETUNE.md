@@ -39,16 +39,15 @@ bash prepare/install_deps.sh piece
 ## 拿骨干
 
 ```bash
-python -m prepare.fetch_backbone                        # 默认 Ismantic/BERTc-315M
-python -m prepare.fetch_backbone --repo Ismantic/BERTc-165M
+huggingface-cli download Ismantic/BERTc-315M --local-dir models/BERTc-315M
 ```
 
-这一步把 HF 发布包的 `model.safetensors` 转成微调脚本认的 `model.pt`,产出在
-`prepare/backbones/BERTc-315M/`。
+下下来直接当 `--ckpt_dir` 用,**不需要任何格式转换**。微调脚本认两种目录:
+预训练产出的 `model.pt`,和 HF 发布包的 `model.safetensors`。
 
-> 为什么要转:`src/` 只依赖 torch,不引入 `safetensors` 和 `huggingface_hub`。
-> 下载和格式转换是"准备"的事,归 `prepare/`。直接把 HF 目录当 `--ckpt_dir`
-> 传给微调脚本会得到一句明确的提示,让你回来跑这条命令。
+> 顺带一提,`src/` 读 safetensors 没有用 `safetensors` 库 —— 那个格式简单到
+> 不值得为它加依赖(8 字节头长度 + JSON 头 + 裸张量数据),`src/checkpoint.py`
+> 里三十行纯 torch 就够了。`src/` 至今只依赖 torch。
 
 两个规格:
 
@@ -86,7 +85,7 @@ PD-1998 是人民日报 1998 年 1–6 月的 PFR 标注语料。前 5 个月做
 
 ```bash
 python -m src.finetune_mt \
-    --ckpt_dir prepare/backbones/BERTc-315M \
+    --ckpt_dir models/BERTc-315M \
     --train_data prepare/datasets/mt_train.pt \
     --dev_data prepare/datasets/mt_dev.pt \
     --output_dir output/mt \
@@ -168,7 +167,7 @@ prepare/datasets/csc_test.pt        707 条(SIGHAN-15 官方)
 
 ```bash
 python -m src.finetune_csc \
-    --ckpt_dir prepare/backbones/BERTc-315M \
+    --ckpt_dir models/BERTc-315M \
     --train_data prepare/datasets/csc_train.pt \
     --test_data prepare/datasets/csc_test.pt \
     --output_dir output/csc \

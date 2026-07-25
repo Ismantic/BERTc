@@ -27,6 +27,7 @@ from torch.utils.data import DataLoader
 
 from .data import CSCDataset, CSCCollator                          # noqa: E402
 from .evaluate import evaluate_csc                                 # noqa: E402
+from .checkpoint import load_backbone
 from .model import ModernBertConfig, ModernBertModel               # noqa: E402
 from .optim import linear_schedule_with_warmup                     # noqa: E402
 
@@ -34,24 +35,10 @@ from .optim import linear_schedule_with_warmup                     # noqa: E402
 class ModernBertCSC(nn.Module):
     def __init__(self, ckpt_dir: str, vocab_size: int):
         super().__init__()
-        ckpt_dir = Path(ckpt_dir)
-        cfg_dict = json.loads((ckpt_dir / "config.json").read_text())
+        bert_sd, cfg_dict = load_backbone(ckpt_dir)
         cfg = ModernBertConfig(**{k: v for k, v in cfg_dict.items()
                                   if k in ModernBertConfig.__dataclass_fields__})
         self.bert = ModernBertModel(cfg)
-
-        ckpt_file = ckpt_dir / "model.pt"
-        if not ckpt_file.exists():
-            if (ckpt_dir / "model.safetensors").exists():
-                raise SystemExit(
-                    f"{ckpt_dir} 是 Hugging Face 发布包(model.safetensors),"
-                    f"微调脚本读的是 model.pt。先转一下:\n"
-                    f"    python -m prepare.fetch_backbone --local {ckpt_dir}")
-            raise SystemExit(f"{ckpt_dir} 下没有 model.pt")
-        ckpt = torch.load(ckpt_file, map_location="cpu",
-                          weights_only=False)
-        sd = ckpt.get("ema") or ckpt["model"]
-        bert_sd = {k[len("bert."):]: v for k, v in sd.items() if k.startswith("bert.")}
         self.bert.load_state_dict(bert_sd, strict=True)
 
         h = cfg.hidden_size
@@ -81,7 +68,9 @@ def focal_bce_loss(logits, labels, gamma: float = 2.0, valid_mask=None):
 def build_argparser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--ckpt_dir", required=True, help="预训练骨干 ckpt 目录")
+    p.add_argument("--ckpt_dir", required=True,
+                   help="骨干目录。预训练产出(model.pt)或从 HF 下的"
+                        "发布包(model.safetensors)都行")
     p.add_argument("--train_data", required=True, help="prepare/ 产出的 CSC 训练集")
     p.add_argument("--test_data", required=True, help="预编码的 SIGHAN-15 测试集")
     p.add_argument("--output_dir", required=True)

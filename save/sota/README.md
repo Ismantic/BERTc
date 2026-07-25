@@ -31,8 +31,8 @@ SOTA + 次好的**硬链接**(同 inode;Summer/BERT/ 已删但 BERTc 这端 inod
 - backbone:`Ismantic/BERTc-165M`(12L/1024H/2752I/16h)
 - fine-tune(重构后的等价命令):
   ```bash
-  python -m prepare.fetch_backbone --repo Ismantic/BERTc-165M
-  python -m src.finetune_mt --ckpt_dir prepare/backbones/BERTc-165M \
+  huggingface-cli download Ismantic/BERTc-165M --local-dir models/BERTc-165M
+  python -m src.finetune_mt --ckpt_dir models/BERTc-165M \
       --train_data prepare/datasets/mt_train.pt --dev_data prepare/datasets/mt_dev.pt \
       --output_dir output/mt --epochs 5 --batch_size 64 \
       --bert_lr 2e-5 --head_lr 5e-4 --warmup_ratio 0.1 \
@@ -45,8 +45,8 @@ SOTA + 次好的**硬链接**(同 inode;Summer/BERT/ 已删但 BERTc 这端 inod
 - backbone:`Ismantic/BERTc-315M`(24L/1024H/2752I/16h)
 - fine-tune(重构后的等价命令):
   ```bash
-  python -m prepare.fetch_backbone --repo Ismantic/BERTc-315M
-  python -m src.finetune_csc --ckpt_dir prepare/backbones/BERTc-315M \
+  huggingface-cli download Ismantic/BERTc-315M --local-dir models/BERTc-315M
+  python -m src.finetune_csc --ckpt_dir models/BERTc-315M \
       --train_data prepare/datasets/csc_train.pt --test_data prepare/datasets/csc_test.pt \
       --output_dir output/csc --epochs 10 --batch_size 32 --lr 3e-5 \
       --warmup_ratio 0.1 --det_weight 0.3 --threshold 0.7 --max_len 128
