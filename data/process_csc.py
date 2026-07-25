@@ -51,8 +51,7 @@ import source
 # 明显是下载失败残留的目录(内容为 HTML 错误页 / "404: Not Found")
 JUNK_MARKERS = ("404: Not Found", "Invalid username or password.", "<!DOCTYPE", "<html")
 
-# 原 all_pairs.pkl 整文件排除掉的源。逐文件比对确认:这几个文件贡献的等长对
-# 100%(HSK/lemon_v2/val_bak)或 99%(MuCGEC)都不在原 pkl 里。
+# all 配方要整文件排除的源:语法纠错不是同音/形似字替换,混进来会污染训练。
 EXCLUDE_PATTERNS = [
     "NLPCC2023/grammar/",   # HSK 10.4 万 + MuCGEC —— 语法纠错,非同音/形似字替换
     "val_bak",              # 备份文件
@@ -148,8 +147,7 @@ def collect(raw_dir: Path, equal_length: bool = True,
             apply_excludes: bool = True) -> tuple[list, dict]:
     """扫全部源,返回 (去重后的 pair 列表, 每个文件的贡献数)。
 
-    equal_length=True 只保留 len(src)==len(tgt) 的对 —— 狭义 CSC 的定义,
-    也是原 all_pairs.pkl 的实际口径(其 826,097 对中不等长的为 0)。
+    equal_length=True 只保留 len(src)==len(tgt) 的对 —— 狭义 CSC 的定义。
     """
     stats = {}
     seen, pairs = set(), []
@@ -228,7 +226,7 @@ def main() -> None:
     ap.add_argument("--output", type=Path, default=None,
                     help="默认按配方命名放到 data/derived/csc/")
     ap.add_argument("--verify", action="store_true",
-                    help="跟现有 all_pairs.pkl 比对覆盖率,不写文件")
+                    help="只统计,不写文件")
     ap.add_argument("--recipe", choices=("sighan_wang271k", "all"),
                     default="sighan_wang271k",
                     help="sighan_wang271k = 已发布模型用的那份(24.9 万对);"
@@ -242,7 +240,7 @@ def main() -> None:
 
     if args.output is None:
         args.output = (source.CSC_PAIRS if args.recipe == "sighan_wang271k"
-                       else source.CSC_DIR / "all_pairs.pkl")
+                       else source.CSC_DIR / "all_pairs.pkl")   # all 配方的产出
     if not args.raw_dir.exists():
         sys.exit(f"raw 目录不存在: {args.raw_dir} —— 先跑 python data/download.py --csc")
 

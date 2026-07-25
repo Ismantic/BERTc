@@ -15,7 +15,7 @@
 
 用法:
     python -m prepare.build_csc
-    python -m prepare.build_csc --train_pkl data/derived/csc/all_pairs.pkl
+    python -m prepare.build_csc --train_pkl <别的 pkl>
 """
 import argparse
 import pickle

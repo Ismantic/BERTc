@@ -120,7 +120,7 @@ FINETUNE_SOURCES = {
     ),
 }
 
-# CSC 的四个源。逐文件比对确认它们覆盖原 all_pairs.pkl 的全部内容;
+# CSC 的数据源。合并规则见 data/process_csc.py;
 # 这几个源之间有重叠(比如 CTCDataset 里的 lemon 和 sighan 与别处重复),
 # 合并去重的规则见 data/process_csc.py。
 CSC_SOURCES = {
