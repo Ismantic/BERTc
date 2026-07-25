@@ -25,9 +25,17 @@
   - shibing624/*.tsv 有表头 source/target/type
   - 下载失败会在目录里留下 HTML 错误页,要能识别并跳过
 
+两个配方:
+
+  sighan_wang271k  wang271k/train + sighan 13/14/15 的 train,去重后 249,978 对。
+                   **已发布的 CSC 模型(F1 0.8346)用的是这份。**
+  all              扫 raw 下全部源,去重后约 82.6 万对。数据多 3.3 倍,
+                   训练时间也是 3.3 倍,效果如何还没验证过。
+
 用法:
-    python data/process_csc.py                  # → data/derived/csc/all_pairs.pkl
-    python data/process_csc.py --verify         # 跟现有 pkl 比对,不写文件
+    python data/process_csc.py                        # 默认 sighan_wang271k
+    python data/process_csc.py --recipe all           # 全部源
+    python data/process_csc.py --verify               # 只统计,不写文件
 """
 import argparse
 import gzip
@@ -181,14 +189,50 @@ def collect(raw_dir: Path, equal_length: bool = True,
     return pairs, stats
 
 
+# 已发布模型实际用的配方。顺序即去重优先级。
+SIGHAN_WANG271K = [
+    "wang271k/train.json",
+    "CTCDataset/sighan/sighan13_train.jsonl",
+    "CTCDataset/sighan/sighan14_train.jsonl",
+    "CTCDataset/sighan/sighan15_train.jsonl",
+]
+
+
+def collect_recipe(raw_dir: Path, files: list[str],
+                   equal_length: bool = True) -> tuple[list, dict]:
+    """按给定文件清单收集,不扫整个目录。"""
+    stats, seen, pairs = {}, set(), []
+    for rel in files:
+        path = raw_dir / rel
+        if not path.exists():
+            sys.exit(f"缺少 {path} —— 先跑 python data/download.py --csc")
+        loader = (load_json if path.suffix == ".json" else
+                  load_jsonl if ".jsonl" in path.name else load_tsv)
+        n_new = 0
+        for pair in loader(path):
+            if equal_length and len(pair[0]) != len(pair[1]):
+                continue
+            if pair not in seen:
+                seen.add(pair)
+                pairs.append(pair)
+                n_new += 1
+        stats[rel] = n_new
+    return pairs, stats
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--raw-dir", type=Path,
                     default=source.DATA_ROOT / "csc")
-    ap.add_argument("--output", type=Path, default=source.CSC_PAIRS)
+    ap.add_argument("--output", type=Path, default=None,
+                    help="默认按配方命名放到 data/derived/csc/")
     ap.add_argument("--verify", action="store_true",
                     help="跟现有 all_pairs.pkl 比对覆盖率,不写文件")
+    ap.add_argument("--recipe", choices=("sighan_wang271k", "all"),
+                    default="sighan_wang271k",
+                    help="sighan_wang271k = 已发布模型用的那份(24.9 万对);"
+                         "all = 扫全部源(82.6 万对)")
     ap.add_argument("--top", type=int, default=20, help="打印贡献最多的 N 个文件")
     ap.add_argument("--no-length-filter", action="store_true",
                     help="不做等长过滤(会混入增删类语法错误,与原 pkl 口径不符)")
@@ -196,13 +240,21 @@ def main() -> None:
                     help="不排除 EXCLUDE_PATTERNS 里的源(会多出 12.6 万对语法/重复数据)")
     args = ap.parse_args()
 
+    if args.output is None:
+        args.output = (source.CSC_PAIRS if args.recipe == "sighan_wang271k"
+                       else source.CSC_DIR / "all_pairs.pkl")
     if not args.raw_dir.exists():
         sys.exit(f"raw 目录不存在: {args.raw_dir} —— 先跑 python data/download.py --csc")
 
-    print(f"扫描 {args.raw_dir} ...")
-    pairs, stats = collect(args.raw_dir,
-                           equal_length=not args.no_length_filter,
-                           apply_excludes=not args.no_excludes)
+    if args.recipe == "sighan_wang271k":
+        print(f"配方 sighan_wang271k({len(SIGHAN_WANG271K)} 个文件)")
+        pairs, stats = collect_recipe(args.raw_dir, SIGHAN_WANG271K,
+                                      equal_length=not args.no_length_filter)
+    else:
+        print(f"配方 all:扫描 {args.raw_dir} ...")
+        pairs, stats = collect(args.raw_dir,
+                               equal_length=not args.no_length_filter,
+                               apply_excludes=not args.no_excludes)
     print(f"\n去重后 {len(pairs):,} 对,来自 {len(stats)} 个文件")
     print(f"\n贡献最多的 {args.top} 个:")
     for name, n in sorted(stats.items(), key=lambda kv: -kv[1])[:args.top]:

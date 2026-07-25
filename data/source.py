@@ -169,7 +169,7 @@ DERIVED = {
 
 PD98_DIR = DERIVED_ROOT / "pd98"                                   # cws/pos/ner jsonl
 CSC_DIR = DERIVED_ROOT / "csc"
-CSC_PAIRS = CSC_DIR / "all_pairs.pkl"                              # CSC 句对
+CSC_PAIRS = CSC_DIR / "sighan_wang271k_pairs.pkl"                 # CSC 句对(已发布模型用的配方)
 SIGHAN_TEST = CSC_DIR / "sighan2015_test_official.tsv"             # 官方 707 条
 
 
