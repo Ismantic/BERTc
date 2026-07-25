@@ -67,9 +67,9 @@ class Source:
 PRETRAIN_SOURCES = {
     "skypile": Source(
         name="skypile", kind="hf", repo_id="Skywork/SkyPile-150B",
-        subdir="SkyPile", part_glob="*.parquet", n_parts=21,
-        allow_patterns=["*.parquet"],
-        note="中文网页。HF 上是 150B 全量,只取前 21 个 parquet。",
+        subdir="SkyPile", part_glob="data/*.jsonl", n_parts=21,
+        allow_patterns=["data/*.jsonl"],
+        note="中文网页。HF 上是 437 个 jsonl / 665GB 全量,只取前 21 个(23.5GB)。",
     ),
     "cci3": Source(
         name="cci3", kind="hf", repo_id="BAAI/CCI3-HQ",

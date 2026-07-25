@@ -62,7 +62,7 @@ WS_RE = re.compile(r"\s+")
 ZH_SOURCES = [
     ("finewiki_zh", "parquet"),
     ("people_daily", "documents"),
-    ("skypile", "parquet"),
+    ("skypile", "jsonl"),
     ("cci3", "jsonl"),
     ("fineweb_edu_zh", "parquet"),
 ]
