@@ -45,16 +45,29 @@ def read_tsv(path: Path) -> list[tuple[str, str]]:
     return pairs
 
 
-def encode_pairs(pairs, tok) -> list[dict]:
+def encode_pairs(pairs, tok, keep_full_src: bool = False) -> list[dict]:
+    """句对 → id。
+
+    keep_full_src=False(训练):按 min(len(src), len(tgt)) 对齐 —— 逐位置的
+    纠错标签只在两边都有字的位置上有定义。
+    keep_full_src=True(测试):按 src 的完整长度编码。SIGHAN-15 测试集里有
+    增删类错误,src 和 tgt 不等长,按 min 截会把长的那句尾巴切掉,评测就跟
+    官方口径对不上了。
+    """
     items = []
     for src, tgt in pairs:
-        n = min(len(src), len(tgt))
+        n = len(src) if keep_full_src else min(len(src), len(tgt))
         if n == 0:
             continue
+        cor = tok.encode(tgt[:n])
+        src_ids = tok.encode(src[:n])
+        if len(cor) < n:                       # tgt 比 src 短,补齐(评测不看这段)
+            cor = cor + src_ids[len(cor):]
         items.append({
-            "input_ids": tok.encode(src[:n]),
-            "cor_labels": tok.encode(tgt[:n]),
-            "det_labels": [1 if src[i] != tgt[i] else 0 for i in range(n)],
+            "input_ids": src_ids,
+            "cor_labels": cor,
+            "det_labels": [1 if i < len(tgt) and src[i] != tgt[i] else 0
+                           for i in range(n)],
         })
     return items
 
@@ -85,14 +98,27 @@ def main() -> None:
 
     # 先编训练集再编测试集,让反查表覆盖两边见过的所有字
     train_items = encode_pairs(train_pairs, tok)
-    test_items = encode_pairs(test_pairs, tok)
+    test_items = encode_pairs(test_pairs, tok, keep_full_src=True)
     id_to_char = tok.id_to_char()
     print(f"字→id 缓存 {len(id_to_char):,} 个不同的字")
 
     common = {"format": "bertc-csc-v1", "pad_token_id": tok.pad_token_id,
               "vocab_size": tok.vocab_size, "id_to_char": id_to_char}
     save(pack(train_items, FIELDS, common), args.out_dir / "csc_train.pt")
-    save(pack(test_items, FIELDS, common), args.out_dir / "csc_test.pt")
+
+    # 测试集额外存原文。评测要跟标准答案做字符串比对,而 id→字 的往返是有损的
+    # (不同的字可能撞到同一个 id,实测 SIGHAN-15 里有 錓→镒、ㄦ→㚖 这类),
+    # 拿还原出来的文本当参照会让分数偏高。预测那一侧没有别的办法,只能走还原,
+    # 这跟原实现一致。
+    n_bad = sum(1 for s, _ in test_pairs
+                if "".join(id_to_char.get(i, "") for i in tok.encode(s)) != s)
+    print(f"测试集 {len(test_pairs)} 条中 {n_bad} 条 id→字 往返不还原,"
+          f"所以额外存原文作参照")
+    save(pack(test_items, FIELDS, {
+        **common,
+        "src_texts": [s for s, _ in test_pairs],
+        "tgt_texts": [t for _, t in test_pairs],
+    }), args.out_dir / "csc_test.pt")
 
 
 if __name__ == "__main__":

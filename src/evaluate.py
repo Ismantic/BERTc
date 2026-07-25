@@ -154,7 +154,8 @@ def correct_ids(model, input_ids, attention_mask, threshold: float = 0.7):
 
 @torch.no_grad()
 def evaluate_csc(model, dataset, collator, device, id_to_char: dict,
-                 threshold: float = 0.7, batch_size: int = 32) -> dict:
+                 threshold: float = 0.7, batch_size: int = 32,
+                 src_texts=None, tgt_texts=None) -> dict:
     """pycorrector 口径的句级评测。
 
     句级判定:
@@ -163,6 +164,11 @@ def evaluate_csc(model, dataset, collator, device, id_to_char: dict,
       原句!=答案 且 预测==答案 → TP(改对了)
       原句!=答案 但 预测!=答案 → FN(没改对)
     整句必须完全一致才算对,改对一半不给分。
+
+    **参照必须用 src_texts / tgt_texts 里的原文**(prepare/ 写进数据集文件)。
+    id→字 的往返是有损的:不同的字可能撞到同一个 id,而且截断会丢尾巴。
+    拿还原出来的文本当参照,分数会虚高(实测 SIGHAN-15 上 +0.006)。
+    预测那一侧只能走还原,这跟原实现一致。
     """
     was_training = model.training
     model.eval()
@@ -175,6 +181,7 @@ def evaluate_csc(model, dataset, collator, device, id_to_char: dict,
                        for t, f in zip(ids, fallback))
 
     tp = fp = fn = tn = 0
+    idx = 0
     for batch in loader:
         input_ids = batch["input_ids"].to(device, non_blocking=True)
         attn = batch["attention_mask"].to(device, non_blocking=True)
@@ -186,9 +193,14 @@ def evaluate_csc(model, dataset, collator, device, id_to_char: dict,
 
         for i in range(src_ids.size(0)):
             n = int(batch["attention_mask"][i].sum())
-            src = to_text(src_ids[i, :n], src_ids[i, :n])
-            tgt = to_text(cor_ids[i, :n], src_ids[i, :n])
             pred = to_text(pred_ids[i, :n], src_ids[i, :n])
+            if src_texts is not None:
+                src, tgt = src_texts[idx], tgt_texts[idx]
+                pred = pred + src[n:]          # 超出 max_len 的尾巴原样接回
+            else:
+                src = to_text(src_ids[i, :n], src_ids[i, :n])
+                tgt = to_text(cor_ids[i, :n], src_ids[i, :n])
+            idx += 1
             if src == tgt:
                 tn += (tgt == pred)
                 fp += (tgt != pred)

@@ -116,6 +116,11 @@ def main() -> None:
                  f"请用新版 prepare/ 重新生成")
     id_to_char = {int(k): v for k, v in id_to_char.items()}
     vocab_size = blob.get("vocab_size") or (max(id_to_char) + 1)
+    # 原文参照:id→字 往返有损,拿还原文本当参照会让分数虚高
+    src_texts, tgt_texts = blob.get("src_texts"), blob.get("tgt_texts")
+    if src_texts is None:
+        print("  ! 测试集里没有 src_texts,评测将用 id 还原的文本作参照,"
+              "分数会略高于官方口径", flush=True)
 
     total_steps = args.epochs * len(loader)
     print(f"训练 {len(train_ds):,} 条 | 测试 {len(test_ds):,} 条 | "
@@ -167,7 +172,8 @@ def main() -> None:
                       flush=True)
 
         m = evaluate_csc(model, test_ds, collator, device, id_to_char,
-                         threshold=args.threshold)
+                         threshold=args.threshold,
+                         src_texts=src_texts, tgt_texts=tgt_texts)
         print(f"\n=== epoch {ep}/{args.epochs}  "
               f"cor={sum_cor / max(1, n_batch):.4f} det={sum_det / max(1, n_batch):.4f} | "
               f"SIGHAN-15 acc={m['acc']:.4f} P={m['precision']:.4f} "
