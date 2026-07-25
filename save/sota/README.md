@@ -28,14 +28,29 @@ SOTA + 次好的**硬链接**(同 inode;Summer/BERT/ 已删但 BERTc 这端 inod
 ## 训练配置
 
 ### MT joint(v4-Mid + FGM 5ep)— **新 SOTA**
-- backbone:`pretrain/modern_bertc/output_v4_mid/checkpoint-8500`(Modern BERTc 165M,12L/1024H/2752I/16h)
-- fine-tune:`pretrain/modern_bertc/train_modern_mt.py --alpha_pos 2.0 --beta_ner 0.5 --fgm --fgm_eps 1.0 --epochs 5 --batch_size 64 --bert_lr 2e-5 --head_lr 5e-4 --warmup_ratio 0.1`
+- backbone:`Ismantic/BERTc-165M`(12L/1024H/2752I/16h)
+- fine-tune(重构后的等价命令):
+  ```bash
+  python -m prepare.fetch_backbone --repo Ismantic/BERTc-165M
+  python -m src.finetune_mt --ckpt_dir prepare/backbones/BERTc-165M \
+      --train_data prepare/datasets/mt_train.pt --dev_data prepare/datasets/mt_dev.pt \
+      --output_dir output/mt --epochs 5 --batch_size 64 \
+      --bert_lr 2e-5 --head_lr 5e-4 --warmup_ratio 0.1 \
+      --alpha_pos 2.0 --beta_ner 0.5 --fgm --fgm_eps 1.0 --dev_limit 2000
+  ```
 - dev 演化:1.4611 → 1.4663 → 1.4677 → 1.4674 → **1.4689**(ep5 final 反弹)
 
 ### CSC(v4-Large v8 10ep)— **当前 SOTA**(2026-06-14)
 
-- backbone:`pretrain/modern_bertc/output_v4_large/checkpoint-8500`(Modern BERTc 316M,24L/1024H/2752I/16h)
-- fine-tune:`csc/train/train_csc_modern.py --epochs 10 --batch_size 32 --lr 3e-5 --warmup_ratio 0.1 --det_weight 0.3 --threshold 0.7 --max_len 128`
+- backbone:`Ismantic/BERTc-315M`(24L/1024H/2752I/16h)
+- fine-tune(重构后的等价命令):
+  ```bash
+  python -m prepare.fetch_backbone --repo Ismantic/BERTc-315M
+  python -m src.finetune_csc --ckpt_dir prepare/backbones/BERTc-315M \
+      --train_data prepare/datasets/csc_train.pt --test_data prepare/datasets/csc_test.pt \
+      --output_dir output/csc --epochs 10 --batch_size 32 --lr 3e-5 \
+      --warmup_ratio 0.1 --det_weight 0.3 --threshold 0.7 --max_len 128
+  ```
 - 关键改动 vs v4-Mid 配置:
   - **lr 5e-5 → 3e-5**(Large 收敛对 lr 敏感,小 lr 更稳)
   - **5 ep → 10 ep**(Large 5ep 欠训,ep10 仍在涨)
@@ -128,3 +143,27 @@ ckpt = torch.load("sota_csc_v4mid_5ep_best.pt", map_location="cpu")
 | BERTc v4-Mid CSC v1(无 tied)| 165M | 同上但 fresh head | 0.7802 | 0.9231 | 0.6756 |
 
 **v4-Mid tied 持平 MacBERT-large(326M),半参数下达 MacBERT4CSC baseline 同水平**。
+
+
+## 评测口径
+
+**MT 的数字是在 dev 前 2000 句上测的**(训练脚本 `--dev_limit 2000`,选 best.pt
+用的也是这个口径),不是全部 21,143 句。全量 dev 上是:
+
+| | 分词 | 词性 | 实体 | joint |
+|---|---|---|---|---|
+| 前 2000 句(本文档全部数字) | 0.9840 | 0.9800 | 0.9660 | 1.4712 |
+| 全量 21,143 句 | 0.9790 | 0.9787 | 0.9597 | 1.4646 |
+
+**CSC 的数字是 SIGHAN-15 官方 707 条**(`shibing624/pycorrector` 里那一版)。
+CTCDataset 里还有个 1100 条的 `sighan15_test.jsonl`,不是同一个东西,不能混用。
+
+## 复现
+
+```bash
+python test/test_reproduce_sota.py
+```
+
+拿本目录的 checkpoint 跑完整评测,对照本文档记录的数字。这是判断代码有没有
+改坏的硬标准 —— 2026-07-25 的四层重构就是靠它确认 MT 1.4712 和 CSC 0.8346
+一位不差地复现了。

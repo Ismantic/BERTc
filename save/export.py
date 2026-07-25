@@ -20,7 +20,7 @@ import torch
 from safetensors.torch import save_file
 
 from . import cards
-from .releases import ALL, BACKBONES, FINETUNES
+from .releases import ALL, BACKBONES
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"

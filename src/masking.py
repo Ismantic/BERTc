@@ -7,7 +7,8 @@ v4-Large 用的是 WWM —— 词边界由 prepare/ 用 Wapic 切好、写在 .w
 两者都遵循 BERT 原文的 80/10/10:选中的位置里 80% 换成 [MASK]、
 10% 换成随机 token、10% 保持原样(但仍然算 loss)。
 
-搬自 pretrain/train_bert_mlm.py,逻辑未改,test/test_masking.py 做同随机种子对拍。
+逻辑搬自重构前的 train_bert_mlm.py(已删),迁移时用同随机种子逐值对拍过,
+对拍脚本随旧实现一并移除 —— 长期回归靠 test/test_reproduce_sota.py。
 """
 import torch
 
