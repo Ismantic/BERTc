@@ -37,6 +37,8 @@ import time
 from pathlib import Path
 
 import numpy as np
+import piece_tokenizer as _pt
+import wapic as _wapic
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "data"))
@@ -68,11 +70,14 @@ _PIECE = None
 
 
 def init_worker(wapic_model: str, piece_model: str) -> None:
+    """每个 worker 进程各自建一份分词器和 tokenizer。
+
+    对象必须在子进程里构造 —— C++ 扩展对象 pickle 不过去,而且用的是 spawn
+    上下文。模块本身在顶部 import 即可,spawn 的子进程会重新 import 本模块。
+    """
     global _WAPIC, _PIECE
-    import piece_tokenizer as pt
-    import wapic
-    _WAPIC = wapic.Segmenter(wapic_model)
-    _PIECE = pt.Tokenizer()
+    _WAPIC = _wapic.Segmenter(wapic_model)
+    _PIECE = _pt.Tokenizer()
     _PIECE.load(piece_model, dict="no")
 
 

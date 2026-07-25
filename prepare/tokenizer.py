@@ -15,6 +15,8 @@
 import shutil
 from pathlib import Path
 
+import piece_tokenizer as _pt
+
 
 class PieceTokenizer:
     """字级 tokenizer,带 字→id 缓存。
@@ -25,14 +27,12 @@ class PieceTokenizer:
     """
 
     def __init__(self, model_dir):
-        import piece_tokenizer as pt
-
         self.dir = Path(model_dir)
         piece_path = self.dir / "piece.model"
         if not piece_path.exists():
             raise FileNotFoundError(f"{self.dir} 下没有 piece.model")
 
-        self._tok = pt.Tokenizer()
+        self._tok = _pt.Tokenizer()
         self._tok.load(str(piece_path), dict="no")
 
         piece_vocab = self._tok.vocab_size()
