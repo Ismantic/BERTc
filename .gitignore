@@ -1,5 +1,10 @@
 # Data + checkpoints
-data/
+# 注:顶层 data/ 现在是**下载/加工代码**(要进 git),所以这里逐个列语料目录,
+# 不能再用笼统的 data/
+csc/data/
+finetune/NLP_BERT_CRF/data/
+pretrain/modern_bertc/data/
+pretrain/modern_bertc/data[0-9]/
 output/
 output_*/
 logs/

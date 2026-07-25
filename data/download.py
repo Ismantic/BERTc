@@ -1,0 +1,205 @@
+"""下载 BERTc 用到的全部数据源。
+
+用法:
+    python data/download.py --list                # 看现状,不下载
+    python data/download.py skypile               # 下一个源(默认用量)
+    python data/download.py skypile --n-parts 42  # 覆盖用量
+    python data/download.py --pretrain            # 预训练那 7 个源
+    python data/download.py --all
+
+part 数默认 = v4-Large 实跑用量(见 source.py)。SkyPile / CCI3-HQ /
+FineWeb-Edu 在 HF 上都是几百 GB 全量,**不要**无参数 snapshot_download。
+
+已存在的文件跳过,可反复运行续传。
+"""
+import argparse
+import os
+import re
+import sys
+import zipfile
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import source
+
+# 必须在 import huggingface_hub 之前设 HF_ENDPOINT。
+# 代理要清掉,否则走不通 hf-mirror —— 但 GitHub 反过来**需要**代理,
+# 所以先存下来,download_github 里再临时恢复。
+if source.HF_ENDPOINT:
+    os.environ["HF_ENDPOINT"] = source.HF_ENDPOINT
+SAVED_PROXY = {k: v for k, v in os.environ.items() if "proxy" in k.lower()}
+for _k in SAVED_PROXY:
+    del os.environ[_k]
+
+
+def _glob_to_re(pat: str) -> re.Pattern:
+    """glob → regex。* 不跨 /,** 跨 /。"""
+    out, i = [], 0
+    while i < len(pat):
+        c = pat[i]
+        if c == "*":
+            if pat[i:i + 2] == "**":
+                out.append(".*")
+                i += 2
+                if pat[i:i + 1] == "/":
+                    i += 1
+            else:
+                out.append("[^/]*")
+                i += 1
+        elif c == "?":
+            out.append("[^/]")
+            i += 1
+        else:
+            out.append(re.escape(c))
+            i += 1
+    return re.compile("^" + "".join(out) + "$")
+
+
+def download_hf(src: source.Source, n_parts, workers: int, dry: bool) -> None:
+    from huggingface_hub import HfApi, hf_hub_download, snapshot_download
+
+    dest = source.DATA_ROOT / src.subdir
+    api = HfApi(endpoint=source.HF_ENDPOINT or None)
+
+    # 全量小仓库:直接 snapshot
+    if n_parts is None and not src.allow_patterns:
+        print(f"  snapshot_download {src.repo_id} → {dest}")
+        if dry:
+            return
+        snapshot_download(repo_id=src.repo_id, repo_type="dataset",
+                          local_dir=str(dest))
+        return
+
+    print(f"  列 {src.repo_id} 文件表 ...")
+    info = api.dataset_info(src.repo_id, files_metadata=False)
+    all_files = sorted(s.rfilename for s in info.siblings)
+
+    pats = [_glob_to_re(p) for p in (src.allow_patterns or [src.part_glob])]
+    picked = [f for f in all_files if any(p.match(f) for p in pats)]
+    if n_parts is not None:
+        picked = picked[:n_parts]
+    if not picked:
+        print(f"  !! 没有文件匹配 {src.allow_patterns or src.part_glob}")
+        return
+
+    todo = [f for f in picked if not (dest / f).exists()]
+    print(f"  选中 {len(picked)} 个,已有 {len(picked) - len(todo)},待下 {len(todo)}")
+    if dry or not todo:
+        return
+
+    def one(path):
+        try:
+            hf_hub_download(repo_id=src.repo_id, repo_type="dataset",
+                            filename=path, local_dir=str(dest),
+                            endpoint=source.HF_ENDPOINT or None)
+            return path, None
+        except Exception as e:                      # noqa: BLE001
+            return path, str(e)
+
+    done, failed = 0, []
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futs = [pool.submit(one, p) for p in todo]
+        for fut in as_completed(futs):
+            path, err = fut.result()
+            done += 1
+            if err:
+                failed.append(path)
+            print(f"    [{done}/{len(todo)}] {os.path.basename(path)}: "
+                  f"{'OK' if not err else 'FAIL ' + err[:80]}", flush=True)
+    if failed:
+        print(f"  !! {len(failed)} 个失败,重跑本命令即可续传")
+
+
+def download_github(src: source.Source, dry: bool) -> None:
+    import urllib.request
+
+    dest = source.DATA_ROOT / src.subdir
+    fname = src.part_glob                    # 就是文件名,如 199801.zip
+    url = f"https://raw.githubusercontent.com/{src.repo_id}/master/{fname}"
+    target = dest / fname
+    print(f"  {url} → {target}")
+    if dry:
+        return
+    dest.mkdir(parents=True, exist_ok=True)
+    if not target.exists():
+        # GitHub 需要代理(跟 hf-mirror 相反),用回模块加载时存下的那份
+        opener = urllib.request.build_opener(
+            urllib.request.ProxyHandler(
+                {k.replace("_proxy", "").replace("_PROXY", "").lower(): v
+                 for k, v in SAVED_PROXY.items()}))
+        with opener.open(url, timeout=120) as resp, open(target, "wb") as f:
+            f.write(resp.read())
+        print(f"    下载完成 {target.stat().st_size / 1e6:.1f} MB")
+    else:
+        print("    已存在,跳过下载")
+
+    if target.suffix == ".zip":
+        with zipfile.ZipFile(target) as zf:
+            names = zf.namelist()
+            if all((dest / n).exists() for n in names):
+                print("    已解压,跳过")
+            else:
+                zf.extractall(dest)
+                print(f"    解压 {len(names)} 项 → {dest}")
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("names", nargs="*", help="源名,见 --list")
+    ap.add_argument("--list", action="store_true", help="只打印现状")
+    ap.add_argument("--all", action="store_true")
+    ap.add_argument("--pretrain", action="store_true", help="仅预训练语料")
+    ap.add_argument("--finetune", action="store_true", help="仅下游任务数据")
+    ap.add_argument("--n-parts", type=int, default=None,
+                    help="覆盖 part 数(只在下单个源时有意义);0 表示全量")
+    ap.add_argument("--workers", type=int, default=8)
+    ap.add_argument("--dry-run", action="store_true")
+    args = ap.parse_args()
+
+    if args.list or not (args.names or args.all or args.pretrain or args.finetune):
+        print(source.describe())
+        if not args.list:
+            print("\n用 --all / --pretrain / <源名> 开始下载。")
+        return
+
+    if args.all:
+        names = list(source.ALL_SOURCES)
+    elif args.pretrain:
+        names = list(source.PRETRAIN_SOURCES)
+    elif args.finetune:
+        names = list(source.FINETUNE_SOURCES) + list(source.CSC_SOURCES)
+    else:
+        names = args.names
+
+    unknown = [n for n in names if n not in source.ALL_SOURCES]
+    if unknown:
+        sys.exit(f"未知源: {unknown}\n可用: {list(source.ALL_SOURCES)}")
+
+    for name in names:
+        src = source.ALL_SOURCES[name]
+        n_parts = src.n_parts
+        if args.n_parts is not None and len(names) == 1:
+            n_parts = None if args.n_parts == 0 else args.n_parts
+        print(f"\n=== {name} ({src.repo_id}) ===")
+        if src.note:
+            print(f"  {src.note}")
+        existing = src.dir()
+        if existing.exists() and existing != source.DATA_ROOT / src.subdir:
+            print(f"  已在历史位置: {existing} —— 跳过下载("
+                  f"要下到新位置请 unset 该 legacy 目录或改 BERTC_DATA_ROOT)")
+            continue
+        if src.kind == "hf":
+            download_hf(src, n_parts, args.workers, args.dry_run)
+        elif src.kind == "github":
+            download_github(src, args.dry_run)
+        else:
+            print(f"  !! 未知 kind {src.kind}")
+
+    print("\n完成。当前状态:\n")
+    print(source.describe())
+
+
+if __name__ == "__main__":
+    main()
