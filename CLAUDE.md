@@ -41,8 +41,6 @@ pretrain/
 │   ├── data3/                 # current 20B-target pretokenized corpus
 │   └── output_v*/             # checkpoints
 ├── train_bert_mlm.py          # legacy char-BERTc trainer (v4–v7)
-├── pretokenize_v6_anneal.py   # v6.5 anneal data prep (legacy)
-├── chain_v6_anneal.sh         # legacy chain (path-broken after Summer rm)
 ├── aurora.py / muon.py        # legacy optimizers (Modern BERTc uses StableAdamW)
 ├── inline_eval_modern_{both,cws,csc}.sh  # called by train_modern.py at each save
 ├── inline_track{,_csc}.tsv    # legacy inline-eval logs (v7 era)
@@ -114,7 +112,7 @@ bash pretrain/inline_eval_modern_both.sh <ckpt_dir>   # runs cws + csc, ~30 min
 ## Migration history (what you should know)
 
 - This repo was carved out of `Summer/BERT/` over multiple sessions. Summer/BERT/ has been **deleted** (commit `116dbf4` in `Summer`); all code/data the BERTc workstreams need is now under `BERTc/` (verified via path grep — see `2026-06-02` session).
-- The legacy `finetune/` top-level scripts (`eval_cws_micro_batch.py`, `case_*.py`, `chain_mt_*.sh`) and `pretrain/{chain_v6_anneal,pretokenize_v6_anneal,inline_eval_quick_mt}` still hard-code `/home/tfbao/Shiyu/Summer/BERT/...` paths. Those are **historical comparison scripts** kept for archival; they don't run anymore. Don't try to "fix" them unless you actually need to re-run that chain.
+- The Summer/BERT-path-broken historical scripts were **deleted** (2026-07-25 dead-code cleanup): the `finetune/` top-level duplicate set (23 files, all byte-identical twins of `finetune/NLP_BERT_CRF/` copies), plus `pretrain/{chain_v6_anneal.sh,pretokenize_v6_anneal.py}` and 10 broken NLP_BERT_CRF comparison scripts (`chain_mt_v2.sh`, `chain_mt_backbones.sh`, `super_mt_chain.sh`, `case_{cws,pos}_analysis.py`, `clean_cws_jsonl.py`, `check_cws_artifacts.py`, `compare_5way.py`, `eval_cws_micro_batch.py`, `build_pd1998_jsonl.py`). They hard-coded the deleted `Summer/BERT/...` paths and no longer ran; recover from git history if a past chain must be re-run.
 - The two Modern BERTc data attempts before v3:
   - `data/` was buggy (wapic `cut` over EN); deleted.
   - `data2/` was correct cut_smart but no `.seg` (no cross-doc isolation); kept as backup; may be deleted later.
