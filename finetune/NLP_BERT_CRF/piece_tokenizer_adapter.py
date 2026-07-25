@@ -20,8 +20,8 @@ class PieceTokenizerAdapter:
         if not os.path.exists(piece_path):
             raise FileNotFoundError(f"piece.model missing in {model_dir}")
         self._tok = pt.Tokenizer()
-        # 训推一致:推理也用 cn_dict='no' 让 SP 端 SplitTextCn 跟训练对齐
-        self._tok.load(piece_path, cn_dict="no")
+        # 训推一致:推理也用 dict='no' 让 SP 端 SplitTextCn 跟训练对齐
+        self._tok.load(piece_path, dict="no")
 
         # 解析 vocab metadata。piece tokenizer 的 specials 来自训练时设置:
         #   sp_char_v1: <unk>=0, <s>=1, </s>=2, <pad>=16259, <user>=16260,

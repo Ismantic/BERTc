@@ -80,7 +80,7 @@ These are internal BERTc evaluations using fine-tuned heads:
 - `model.safetensors`: `ModernBertForMLM` state dict.
 - `config.json`: architecture configuration.
 - `model.py`: model implementation used by the original training code.
-- `piece.model`: tokenizer model; load with `piece_tokenizer` using `cn_dict="no"`.
+- `piece.model`: tokenizer model; load with `piece_tokenizer` using `dict="no"`.
 - `mask_token_id.txt`: mask token id.
 
 ## Loading
@@ -106,7 +106,7 @@ Tokenization in the original code uses the sibling `piece_tokenizer` package:
 import piece_tokenizer as pt
 
 tok = pt.Tokenizer()
-tok.load("piece.model", cn_dict="no")
+tok.load("piece.model", dict="no")
 ids = tok.encode_as_ids("中文测试")
 ```
 

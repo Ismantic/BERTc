@@ -65,7 +65,7 @@ Training recipe:
 - `csc_config.json`: task and metric metadata.
 - `model.py`: Modern BERTc implementation.
 - `csc_model.py`: CSC wrapper and batch correction helper.
-- `piece.model`: tokenizer model; load with `piece_tokenizer` using `cn_dict="no"`.
+- `piece.model`: tokenizer model; load with `piece_tokenizer` using `dict="no"`.
 
 ## Usage
 
@@ -99,7 +99,7 @@ class PieceCharTokenizer:
         import piece_tokenizer as pt
         model_dir = Path(model_dir)
         self._tok = pt.Tokenizer()
-        self._tok.load(str(model_dir / "piece.model"), cn_dict="no")
+        self._tok.load(str(model_dir / "piece.model"), dict="no")
         mask_path = model_dir / "mask_token_id.txt"
         self.mask_token_id = int(mask_path.read_text().strip()) if mask_path.exists() else self._tok.vocab_size()
         self.vocab_size = self._tok.vocab_size() + 1

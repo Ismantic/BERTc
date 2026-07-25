@@ -64,7 +64,7 @@ Training recipe:
 - `config.json`: BERTc backbone architecture.
 - `model.py`: Modern BERTc implementation.
 - `mt_model.py`: MT wrapper, tokenizer adapter, and decode helpers.
-- `piece.model`: tokenizer model; load with `piece_tokenizer` using `cn_dict="no"`.
+- `piece.model`: tokenizer model; load with `piece_tokenizer` using `dict="no"`.
 - `mask_token_id.txt`: mask token id used by the backbone tokenizer.
 - `mt_config.json`: task metadata and source checkpoint.
 
@@ -172,7 +172,7 @@ class PieceCharTokenizer:
 
         model_dir = Path(model_dir)
         self._tok = pt.Tokenizer()
-        self._tok.load(str(model_dir / "piece.model"), cn_dict="no")
+        self._tok.load(str(model_dir / "piece.model"), dict="no")
         self.pad_token_id = self._tok.piece_to_id("<pad>")
         self.unk_token_id = 0
         mask_path = model_dir / "mask_token_id.txt"

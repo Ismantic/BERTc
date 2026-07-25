@@ -35,7 +35,7 @@ def main():
     # 读 piece tokenizer 拿 vocab_size
     import piece_tokenizer as pt
     tok = pt.Tokenizer()
-    tok.load(args.piece_model, cn_dict="no")
+    tok.load(args.piece_model, dict="no")
     piece_vocab = tok.vocab_size()
     mask_token_id = piece_vocab          # BERT vocab 末位
     total_vocab = piece_vocab + 1
