@@ -272,9 +272,8 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument("--chunksize", type=int, default=32)
     p.add_argument("--wapic_model", default=None,
                    help="默认自动定位 deps/Wapic/data/model/wapic-cws.wac")
-    p.add_argument("--piece_model",
-                   default=str(ROOT / "tokenizer"
-                               / "piece.model"))
+    p.add_argument("--piece_model", default=None,
+                   help="默认自动定位 PieceTokenizer 仓库里的 BERTc-Tokenizer.pt")
     p.add_argument("--overalloc", type=float, default=1.10,
                    help="预分配倍数。写不满会截断,写满了会提前停")
     return p
