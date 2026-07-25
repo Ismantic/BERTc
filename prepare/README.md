@@ -6,11 +6,29 @@ tokenizer 和分词器的地方 —— `src/` 只认预编码好的 id,从头到
 ## 全流程
 
 ```bash
-bash prepare/install_deps.sh                 # 重编译 PieceTokenizer / Wapic(仅在它们更新后)
-bash prepare/run_v4_large.sh data            # 下载 + 加工 + 预编码下游数据集
-bash prepare/run_v4_large.sh pretokenize     # 语料 → 定长 chunk
-bash prepare/run_v4_large.sh pretrain        # 预训练(3-5 天,单卡 4090)
-bash prepare/run_v4_large.sh finetune        # MT + CSC 微调
+bash prepare/install_deps.sh          # clone + 编译 PieceTokenizer / Wapic
+bash prepare/run.sh data              # 下载 + 加工 + 预编码下游数据集
+bash prepare/run.sh pretokenize       # 语料 → 定长 chunk
+bash prepare/run.sh pretrain          # 预训练(单卡 4090 约 3-5 天)
+bash prepare/run.sh finetune          # MT + CSC 微调
+```
+
+两个已发布规格用同一个脚本,`SIZE` 切换:
+
+```bash
+SIZE=large bash prepare/run.sh pretrain    # 24L/1024H ≈ 315M(默认)
+SIZE=mid   bash prepare/run.sh pretrain    # 12L/1024H ≈ 165M
+```
+
+预训练配方两者**完全相同**,只差层数和 batch 切分(有效 batch 都是 4096:
+large 16×256,mid 32×128)。CSC 微调配方不同 —— mid 用 b64 lr5e-5 5ep,
+large 用 b32 lr3e-5 10ep,因为 large 5 epoch 严重欠训。
+
+不想预训练的话,微调可以直接用 HF 上的骨干:
+
+```bash
+huggingface-cli download Ismantic/BERTc-315M --local-dir models/BERTc-315M
+CKPT=models/BERTc-315M bash prepare/run.sh finetune
 ```
 
 ## 文件
@@ -23,7 +41,7 @@ pack.py           预编码数据的打包格式(扁平数组 + offsets)
 build_mt.py       PD-1998 jsonl → mt_{train,dev}.pt
 build_csc.py      CSC 句对 → csc_{train,test}.pt
 pretokenize.py    预训练语料 → .pt / .wid / .seg
-run_v4_large.sh   v4-Large 全流程入口
+run.sh            全流程入口。SIZE=large(315M,默认)或 SIZE=mid(165M)
 ```
 
 产物落在 `prepare/datasets/`(下游)和 `prepare/corpus/`(预训练),都不进 git。
