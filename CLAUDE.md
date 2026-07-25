@@ -108,6 +108,7 @@ bash pretrain/inline_eval_modern_both.sh <ckpt_dir>   # runs cws + csc, ~30 min
 - **`dict.txt` is NOT used by the BERTc piece tokenizer** (char-mode loads with `cn_dict="no"`). It is only needed by the Summer ReTok piece tokenizer.
 - **Eval ground truth: do not edit `eval_modern_*.py`, `threshold_sweep.py`, `eval_pycorrector_baseline.py` to make numbers look better.** SIGHAN-15 test (707 samples, pycorrector vendored) is the canonical CSC benchmark.
 - **`gsm8k` and other arithmetic benchmarks are not measured here** — that was a Qwen ReTok concern (sibling project `Summer/`); BERTc is encoder-only.
+- **Commit messages must NOT contain a `Co-Authored-By: Claude ...` trailer** (nor any other AI-attribution footer). This overrides the default Claude Code commit convention.
 
 ## Migration history (what you should know)
 
