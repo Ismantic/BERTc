@@ -3,7 +3,7 @@
 只有 prepare/ 用得到 —— src/ 从头到尾读预编码好的 id,不碰文本,
 所以 PieceTokenizer 不是 src/ 的依赖。
 
-词表约定(来自 pretrain/modern_bertc/tokenizer/):
+词表约定(来自仓库根的 tokenizer/):
   piece.model         SentencePiece 模型,vocab_size() = 12535
   mask_token_id.txt   [MASK] 的 id = 12535,追加在 piece 词表之后
   → BERT 侧的 vocab_size = 12535 + 1 = 12536
@@ -98,7 +98,7 @@ class PieceTokenizer:
 
 
 DEFAULT_TOKENIZER_DIR = (Path(__file__).resolve().parents[1]
-                         / "pretrain" / "modern_bertc" / "tokenizer")
+                         / "tokenizer")
 
 
 def load_tokenizer(model_dir=None) -> PieceTokenizer:

@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 # 骨干:预训练产出,可继续微调
 BACKBONES = {
     "BERTc-165M": {
-        "checkpoint": ROOT / "pretrain" / "modern_bertc" / "output_v4_mid" / "checkpoint-8500",
+        "checkpoint": ROOT / "prepare" / "backbones" / "BERTc-165M",
         "params": "165M",
         "arch": "12L / 1024H / 2752I / 16 heads",
         "mt": "score 1.4689(CWS 0.9836 / POS 0.9753 / NER 0.9632)",
@@ -18,7 +18,7 @@ BACKBONES = {
         "notes": "首个在 165M 规模同时拿到 MT / CSC SOTA 的 Modern BERTc 骨干。",
     },
     "BERTc-315M": {
-        "checkpoint": ROOT / "pretrain" / "modern_bertc" / "output_v4_large" / "checkpoint-8500",
+        "checkpoint": ROOT / "prepare" / "backbones" / "BERTc-315M",
         "params": "315M",
         "arch": "24L / 1024H / 2752I / 16 heads",
         "mt": "score 1.4712(CWS 0.9840 / POS 0.9800 / NER 0.9660)",
@@ -33,7 +33,7 @@ FINETUNES = {
         "task": "mt",
         "base": "BERTc-315M",
         "backbone": BACKBONES["BERTc-315M"]["checkpoint"],
-        "checkpoint": ROOT / "finetune" / "sota" / "sota_mt_v4large_fgm_5ep_best.pt",
+        "checkpoint": ROOT / "save" / "sota" / "sota_mt_v4large_fgm_5ep_best.pt",
         "metrics": {"joint score": "1.4712", "CWS F1": "0.9840",
                     "POS 准确率": "0.9800", "NER F1": "0.9660"},
         "recipe": "5 epoch,batch 64,骨干 lr 2e-5 / 头 lr 5e-4,warmup 0.1,"
@@ -45,7 +45,7 @@ FINETUNES = {
         "task": "mt",
         "base": "BERTc-165M",
         "backbone": BACKBONES["BERTc-165M"]["checkpoint"],
-        "checkpoint": ROOT / "finetune" / "sota" / "sota_mt_v4mid_fgm_5ep_best.pt",
+        "checkpoint": ROOT / "save" / "sota" / "sota_mt_v4mid_fgm_5ep_best.pt",
         "metrics": {"joint score": "1.4689", "CWS F1": "0.9836",
                     "POS 准确率": "0.9753", "NER F1": "0.9632"},
         "recipe": "同 315M-MT",
@@ -55,7 +55,7 @@ FINETUNES = {
         "task": "csc",
         "base": "BERTc-315M",
         "backbone": BACKBONES["BERTc-315M"]["checkpoint"],
-        "checkpoint": ROOT / "finetune" / "sota" / "sota_csc_v4large_v8_best.pt",
+        "checkpoint": ROOT / "save" / "sota" / "sota_csc_v4large_v8_best.pt",
         "metrics": {"句级 F1": "0.8346", "准确率": "0.8430",
                     "精确率": "0.9396", "召回率": "0.7507"},
         "recipe": "10 epoch,batch 32,lr 3e-5,warmup 0.1,"
@@ -66,7 +66,7 @@ FINETUNES = {
         "task": "csc",
         "base": "BERTc-165M",
         "backbone": BACKBONES["BERTc-165M"]["checkpoint"],
-        "checkpoint": ROOT / "finetune" / "sota" / "sota_csc_v4mid_5ep_best.pt",
+        "checkpoint": ROOT / "save" / "sota" / "sota_csc_v4mid_5ep_best.pt",
         "metrics": {"句级 F1": "0.8308"},
         "recipe": "5 epoch,batch 64,lr 5e-5,其余同 315M-CSC",
         "data": "同 315M-CSC",

@@ -200,7 +200,7 @@ def main():
                     default=str(source.FINETUNE_SOURCES["pd1998"].dir() / "199801"),
                     help="解压后的月份 txt 所在目录")
     ap.add_argument("--out_dir",
-                    default=str(source.REPO_ROOT / "finetune" / "NLP_BERT_CRF" / "data"),
+                    default=str(source.PD98_DIR),
                     help="MT 训练脚本读的 jsonl 目录")
     ap.add_argument("--dev_month", default="199806",
                     help="哪个月作 dev,其余作 train")

@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PIECE_MODEL = "pretrain/modern_bertc/tokenizer/piece.model"
+PIECE_MODEL = "tokenizer/piece.model"
 WAPIC_MODEL_CANDIDATES = [
     "/home/tfbao/Shiyu/Wapic/data/model/wapic-cws.wac",
     "/home/tfbao/Shiyu/wapic_models_backup/wapic-20260602-h19_1-full.wac",

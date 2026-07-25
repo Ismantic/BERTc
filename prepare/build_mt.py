@@ -24,7 +24,10 @@ from .pack import pack, save
 from .tokenizer import load_tokenizer
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_JSONL_DIR = ROOT / "finetune" / "NLP_BERT_CRF" / "data"
+sys.path.insert(0, str(ROOT / "data"))
+import source as corpus  # noqa: E402
+
+DEFAULT_JSONL_DIR = corpus.PD98_DIR
 DEFAULT_OUT_DIR = ROOT / "prepare" / "datasets"
 
 FIELDS = ("input_ids", "cws_tags", "pos_tags", "ner_tags")

@@ -25,7 +25,7 @@ from .releases import ALL, BACKBONES, FINETUNES
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 ASSETS = Path(__file__).resolve().parent / "assets"
-TOKENIZER_DIR = ROOT / "pretrain" / "modern_bertc" / "tokenizer"
+TOKENIZER_DIR = ROOT / "tokenizer"
 DEFAULT_OUT = Path(__file__).resolve().parent / "releases"
 
 

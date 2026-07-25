@@ -1,6 +1,6 @@
-"""把 csc/data/raw/ 下所有 CSC 源统一成 (错句, 正句) 对,去重后写 pkl。
+"""把 data/downloads/csc/ 下所有 CSC 源统一成 (错句, 正句) 对,去重后写 pkl。
 
-背景:v4-Large CSC SOTA(SIGHAN-15 F1 0.8346)用的 csc/data/all_pairs.pkl
+背景:v4-Large CSC SOTA(SIGHAN-15 F1 0.8346)用的 data/derived/csc/all_pairs.pkl
 是当年临时拼的,**生成代码从未进过 git**。这份是补写的可复现版本。
 
 配方是逐文件集合比对反推出来的,三条规则:
@@ -29,7 +29,7 @@
   - cscd_ime/ ecspell/ 下是当年下载失败留下的 HTML 错误页,跳过
 
 用法:
-    python data/process_csc.py                  # → csc/data/all_pairs.pkl
+    python data/process_csc.py                  # → data/derived/csc/all_pairs.pkl
     python data/process_csc.py --verify         # 跟现有 pkl 比对,不写文件
 """
 import argparse
@@ -50,13 +50,13 @@ JUNK_MARKERS = ("404: Not Found", "Invalid username or password.", "<!DOCTYPE", 
 # 100%(HSK/lemon_v2/val_bak)或 99%(MuCGEC)都不在原 pkl 里。
 EXCLUDE_PATTERNS = [
     "NLPCC2023/grammar/",   # HSK 10.4 万 + MuCGEC —— 语法纠错,非同音/形似字替换
-    "lemon_v2/",            # 与 CTCDataset/lemon/ 同源的另一版本,原口径用前者
     "val_bak",              # 备份文件
+    "sighan15/",            # SIGHAN-15 官方测试集,不能混进训练数据
+    "/.git/",               # clone 下来的仓库元数据
 ]
 
-TSV_PATTERNS = ["sighan/*.txt", "shibing624/*.tsv", "mcsc_full/*.txt",
-                "mcsc_set/*.txt", "lemon_v2/*.txt", "ecspell/*.txt",
-                "cscd_ime/*.txt", "cscd_ime/*.tsv"]
+# 行式 src<TAB>tgt 的文件。MCSCSet 的 annotated_data.txt 带 {} 错误标记 + 第三列。
+TSV_PATTERNS = ["shibing624/*.tsv", "MCSCSet/**/annotated_data.txt"]
 
 
 def _clean(s: str) -> str:
@@ -187,10 +187,9 @@ def collect(raw_dir: Path, equal_length: bool = True,
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--raw-dir", type=Path, default=source.CSC_RAW_DIR)
-    ap.add_argument("--output", type=Path,
-                    default=source.REPO_ROOT / "csc" / "data" / "all_pairs.rebuilt.pkl",
-                    help="默认写 .rebuilt.pkl,不覆盖 SOTA 实际用的 all_pairs.pkl")
+    ap.add_argument("--raw-dir", type=Path,
+                    default=source.DATA_ROOT / "csc")
+    ap.add_argument("--output", type=Path, default=source.CSC_PAIRS)
     ap.add_argument("--verify", action="store_true",
                     help="跟现有 all_pairs.pkl 比对覆盖率,不写文件")
     ap.add_argument("--top", type=int, default=20, help="打印贡献最多的 N 个文件")
@@ -201,7 +200,7 @@ def main() -> None:
     args = ap.parse_args()
 
     if not args.raw_dir.exists():
-        sys.exit(f"raw 目录不存在: {args.raw_dir}")
+        sys.exit(f"raw 目录不存在: {args.raw_dir} —— 先跑 python data/download.py --csc")
 
     print(f"扫描 {args.raw_dir} ...")
     pairs, stats = collect(args.raw_dir,
@@ -212,7 +211,7 @@ def main() -> None:
     for name, n in sorted(stats.items(), key=lambda kv: -kv[1])[:args.top]:
         print(f"  {n:>8,}  {name}")
 
-    ref = source.REPO_ROOT / "csc" / "data" / "all_pairs.pkl"
+    ref = source.CSC_PAIRS if args.output != source.CSC_PAIRS else Path("/nonexistent")
     if ref.exists():
         with open(ref, "rb") as f:
             old = set(pickle.load(f))

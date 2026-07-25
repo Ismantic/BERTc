@@ -26,8 +26,8 @@ from src.finetune_csc import ModernBertCSC                       # noqa: E402
 from src.finetune_mt import ModernBertMT                         # noqa: E402
 
 DATASETS = ROOT / "prepare" / "datasets"
-SOTA = ROOT / "finetune" / "sota"
-BACKBONE_LARGE = ROOT / "pretrain" / "modern_bertc" / "output_v4_large" / "checkpoint-8500"
+SOTA = ROOT / "save" / "sota"
+BACKBONE_LARGE = ROOT / "prepare" / "backbones" / "BERTc-315M"
 
 # finetune/sota/README.md 记录的数
 EXPECT_MT = {"cws_f1": 0.9840, "pos_acc": 0.9800, "ner_f1": 0.9660, "score": 1.4712}

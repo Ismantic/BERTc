@@ -58,3 +58,5 @@ hf_release/
 csc/baseline/macbert4csc_ckpt
 csc/data/raw/*.pt
 csc/data/raw/*.bin
+data/downloads/
+data/derived/

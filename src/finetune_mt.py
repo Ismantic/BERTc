@@ -41,7 +41,15 @@ class ModernBertMT(nn.Module):
                                   if k in ModernBertConfig.__dataclass_fields__})
         self.bert = ModernBertModel(cfg)
 
-        ckpt = torch.load(ckpt_dir / "model.pt", map_location="cpu",
+        ckpt_file = ckpt_dir / "model.pt"
+        if not ckpt_file.exists():
+            if (ckpt_dir / "model.safetensors").exists():
+                raise SystemExit(
+                    f"{ckpt_dir} 是 Hugging Face 发布包(model.safetensors),"
+                    f"微调脚本读的是 model.pt。先转一下:\n"
+                    f"    python -m prepare.fetch_backbone --local {ckpt_dir}")
+            raise SystemExit(f"{ckpt_dir} 下没有 model.pt")
+        ckpt = torch.load(ckpt_file, map_location="cpu",
                           weights_only=False)
         # 有 EMA 就优先用 shadow 权重(更稳),否则用原始权重
         sd = ckpt.get("ema") or ckpt["model"]

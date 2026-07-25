@@ -15,7 +15,7 @@
 
 用法:
     python -m prepare.build_csc
-    python -m prepare.build_csc --train_pkl csc/data/all_pairs.rebuilt.pkl
+    python -m prepare.build_csc --train_pkl data/derived/csc/all_pairs.pkl
 """
 import argparse
 import pickle
@@ -26,8 +26,11 @@ from .pack import pack, save
 from .tokenizer import load_tokenizer
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_TRAIN_PKL = ROOT / "csc" / "data" / "all_pairs.pkl"
-DEFAULT_TEST_TSV = ROOT / "csc" / "data" / "test" / "sighan2015_test_official.tsv"
+sys.path.insert(0, str(ROOT / "data"))
+import source as corpus  # noqa: E402
+
+DEFAULT_TRAIN_PKL = corpus.CSC_PAIRS
+DEFAULT_TEST_TSV = corpus.SIGHAN_TEST
 DEFAULT_OUT_DIR = ROOT / "prepare" / "datasets"
 
 FIELDS = ("input_ids", "cor_labels", "det_labels")

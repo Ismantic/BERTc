@@ -62,15 +62,6 @@ def download_hf(src: source.Source, n_parts, workers: int, dry: bool) -> None:
     dest = source.DATA_ROOT / src.subdir
     api = HfApi(endpoint=source.HF_ENDPOINT or None)
 
-    # 全量小仓库:直接 snapshot
-    if n_parts is None and not src.allow_patterns:
-        print(f"  snapshot_download {src.repo_id} → {dest}")
-        if dry:
-            return
-        snapshot_download(repo_id=src.repo_id, repo_type="dataset",
-                          local_dir=str(dest))
-        return
-
     print(f"  列 {src.repo_id} 文件表 ...")
     info = api.dataset_info(src.repo_id, files_metadata=False)
     all_files = sorted(s.rfilename for s in info.siblings)
@@ -111,13 +102,52 @@ def download_hf(src: source.Source, n_parts, workers: int, dry: bool) -> None:
         print(f"  !! {len(failed)} 个失败,重跑本命令即可续传")
 
 
+def download_hf_snapshot(src: source.Source, dry: bool) -> None:
+    """整仓下载。用于文件不多的小数据集。"""
+    from huggingface_hub import snapshot_download
+
+    dest = source.DATA_ROOT / src.subdir
+    print(f"  snapshot_download {src.repo_id} → {dest}")
+    if dry:
+        return
+    snapshot_download(repo_id=src.repo_id, repo_type="dataset",
+                      local_dir=str(dest))
+
+
+def download_github_repo(src: source.Source, dry: bool) -> None:
+    """git clone --depth 1。数据集仓库常带 LFS,交给 git 处理。"""
+    import subprocess
+
+    dest = source.DATA_ROOT / src.subdir
+    url = f"https://github.com/{src.repo_id}.git"
+    print(f"  git clone --depth 1 {url} → {dest}")
+    if dry:
+        return
+    if (dest / ".git").exists():
+        print("    已存在,git pull")
+        cmd = ["git", "-C", str(dest), "pull", "--ff-only"]
+    else:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        cmd = ["git", "clone", "--depth", "1", url, str(dest)]
+    # GitHub 要走代理(跟 hf-mirror 相反)
+    env = {**os.environ, **SAVED_PROXY}
+    r = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=3600)
+    if r.returncode != 0:
+        print(f"    !! 失败:{(r.stdout + r.stderr)[-400:]}")
+        return
+    n = sum(1 for _ in dest.rglob("*") if _.is_file())
+    size = sum(f.stat().st_size for f in dest.rglob("*") if f.is_file()) / 1e6
+    print(f"    {n} 个文件,{size:.0f} MB")
+
+
 def download_github(src: source.Source, dry: bool) -> None:
     import urllib.request
 
     dest = source.DATA_ROOT / src.subdir
-    fname = src.part_glob                    # 就是文件名,如 199801.zip
+    fname = src.part_glob                    # 文件名,可带子路径
     url = f"https://raw.githubusercontent.com/{src.repo_id}/master/{fname}"
     target = dest / fname
+    target.parent.mkdir(parents=True, exist_ok=True)
     print(f"  {url} → {target}")
     if dry:
         return
@@ -152,13 +182,15 @@ def main() -> None:
     ap.add_argument("--all", action="store_true")
     ap.add_argument("--pretrain", action="store_true", help="仅预训练语料")
     ap.add_argument("--finetune", action="store_true", help="仅下游任务数据")
+    ap.add_argument("--csc", action="store_true", help="仅 CSC 数据源")
     ap.add_argument("--n-parts", type=int, default=None,
                     help="覆盖 part 数(只在下单个源时有意义);0 表示全量")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
-    if args.list or not (args.names or args.all or args.pretrain or args.finetune):
+    if args.list or not (args.names or args.all or args.pretrain
+                     or args.finetune or args.csc):
         print(source.describe())
         if not args.list:
             print("\n用 --all / --pretrain / <源名> 开始下载。")
@@ -170,6 +202,8 @@ def main() -> None:
         names = list(source.PRETRAIN_SOURCES)
     elif args.finetune:
         names = list(source.FINETUNE_SOURCES) + list(source.CSC_SOURCES)
+    elif args.csc:
+        names = list(source.CSC_SOURCES)
     else:
         names = args.names
 
@@ -185,15 +219,14 @@ def main() -> None:
         print(f"\n=== {name} ({src.repo_id}) ===")
         if src.note:
             print(f"  {src.note}")
-        existing = src.dir()
-        if existing.exists() and existing != source.DATA_ROOT / src.subdir:
-            print(f"  已在历史位置: {existing} —— 跳过下载("
-                  f"要下到新位置请 unset 该 legacy 目录或改 BERTC_DATA_ROOT)")
-            continue
         if src.kind == "hf":
             download_hf(src, n_parts, args.workers, args.dry_run)
-        elif src.kind == "github":
+        elif src.kind == "hf-snapshot":
+            download_hf_snapshot(src, args.dry_run)
+        elif src.kind == "github-file":
             download_github(src, args.dry_run)
+        elif src.kind == "github-repo":
+            download_github_repo(src, args.dry_run)
         else:
             print(f"  !! 未知 kind {src.kind}")
 

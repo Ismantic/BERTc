@@ -70,7 +70,8 @@ step_finetune() {
         --train_data "$DATASETS/mt_train.pt" --dev_data "$DATASETS/mt_dev.pt" \
         --output_dir "$ROOT/prepare/output/mt_v4_large" \
         --epochs 5 --batch_size 64 --bert_lr 2e-5 --head_lr 5e-4 \
-        --alpha_pos 2.0 --beta_ner 0.5 --fgm --fgm_eps 1.0
+        --alpha_pos 2.0 --beta_ner 0.5 --fgm --fgm_eps 1.0 \
+        --dev_limit 2000
 
     log "CSC 微调"
     $PY -m src.finetune_csc \

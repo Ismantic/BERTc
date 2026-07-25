@@ -265,7 +265,7 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument("--wapic_model",
                    default="/home/tfbao/Shiyu/Wapic/data/model/wapic-cws.wac")
     p.add_argument("--piece_model",
-                   default=str(ROOT / "pretrain" / "modern_bertc" / "tokenizer"
+                   default=str(ROOT / "tokenizer"
                                / "piece.model"))
     p.add_argument("--overalloc", type=float, default=1.10,
                    help="预分配倍数。写不满会截断,写满了会提前停")
