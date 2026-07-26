@@ -33,6 +33,7 @@ EXPECT_MT = {"cws_f1": 0.9840, "pos_acc": 0.9800, "ner_f1": 0.9660, "score": 1.4
 EXPECT_CSC_F1 = 0.8346
 TOL = 0.005          # 允许的偏差
 DEV_LIMIT = 2000     # 原训练脚本 --eval_dev_limit 的默认值
+SKIPPED = -1         # 缺输入而没跑。绝不能和"跑了且通过"混为一谈
 
 
 def resolve_backbone(name: str = "BERTc-315M") -> Path | None:
@@ -102,7 +103,7 @@ def test_mt(device: str) -> int:
     backbone = resolve_backbone()
     ckpt = resolve_finetuned("sota_mt_v4large_fgm_5ep_best.pt", "BERTc-315M-MT")
     if missing_inputs("mt", backbone, ckpt, dev_path):
-        return 0
+        return SKIPPED
 
     # 原训练脚本的 --eval_dev_limit 默认 2000:记录的数字是在 dev 前 2000 句上
     # 测的,不是全部 21,143 句。口径要对齐,否则数字对不上。
@@ -137,7 +138,7 @@ def test_csc(device: str) -> int:
     backbone = resolve_backbone()
     ckpt = resolve_finetuned("sota_csc_v4large_v8_best.pt", "BERTc-315M-CSC")
     if missing_inputs("csc", backbone, ckpt, test_path):
-        return 0
+        return SKIPPED
 
     blob = torch.load(test_path, map_location="cpu", weights_only=False)
     id_to_char = {int(k): v for k, v in blob["id_to_char"].items()}
@@ -172,17 +173,24 @@ def main() -> int:
     args = ap.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    fails = 0
+    results = {}
     if args.only in (None, "mt"):
         print("=== MT:CWS + POS + NER 联合(v4-Large + FGM 5ep)===")
-        fails += test_mt(device)
+        results["MT"] = test_mt(device)
     if args.only in (None, "csc"):
         print("\n=== CSC:SIGHAN-15(v4-Large v8)===")
-        fails += test_csc(device)
+        results["CSC"] = test_csc(device)
 
-    if fails:
-        print(f"\n{fails} 条链没能复现记录的数字")
+    skipped = [k for k, v in results.items() if v == SKIPPED]
+    failed = [k for k, v in results.items() if v > 0]
+
+    if failed:
+        print(f"\n{'、'.join(failed)} 没能复现记录的数字")
         return 1
+    if skipped:
+        # 缺输入不算通过 —— 报绿会让人以为验过了
+        print(f"\n{'、'.join(skipped)} 因为缺输入没有跑,什么都没验证")
+        return 2
     print("\n新代码复现 SOTA 通过")
     return 0
 

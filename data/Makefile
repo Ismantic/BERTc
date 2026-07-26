@@ -21,8 +21,11 @@
 # 而 GitHub 反过来需要代理,download.py 已经处理了这个矛盾。
 # 走官方源:make download HF_ENDPOINT=
 
-PY ?= /home/tfbao/.venv/bin/python
 HERE := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+
+# 本机偏好写在 local.mk(gitignore),例如:PY = /path/to/.venv/bin/python
+-include $(HERE)../local.mk
+PY ?= $(if $(VIRTUAL_ENV),$(VIRTUAL_ENV)/bin/python,python3)
 
 .PHONY: all status download download-pretrain download-finetune download-csc \
         process process-docs process-cws process-csc clean-derived help

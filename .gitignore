@@ -61,3 +61,4 @@ data/downloads/
 data/derived/
 deps/
 models/
+local.mk

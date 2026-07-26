@@ -18,9 +18,12 @@
 #
 # corpus 和 datasets 是**文件目标** —— 产物在就不会重跑。要强制重来先删产物。
 
-PY      ?= /home/tfbao/.venv/bin/python
 HERE    := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 ROOT    := $(patsubst %/,%,$(dir $(HERE)))
+
+# 本机偏好写在 local.mk(gitignore),例如:PY = /path/to/.venv/bin/python
+-include $(ROOT)/local.mk
+PY      ?= $(if $(VIRTUAL_ENV),$(VIRTUAL_ENV)/bin/python,python3)
 
 SIZE    ?= mid
 CORPUS  ?= $(HERE)/corpus/v4.pt
@@ -53,6 +56,9 @@ endif
 
 BACKBONE := $(OUT)/$(NAME)
 CKPT     ?= $(BACKBONE)/checkpoint-8500
+# CKPT 允许写相对路径(帮助信息里就是这么给的),按仓库根解析 —— check-ckpt
+# 不在 ROOT 下跑,不解析的话 models/BERTc-165M 会被当成 prepare/models/…
+CKPT_DIR := $(if $(filter /%,$(CKPT)),$(CKPT),$(ROOT)/$(CKPT))
 
 .PHONY: help status deps deps-wapic-data datasets corpus pretrain finetune \
         finetune-mt finetune-csc
@@ -69,7 +75,7 @@ status:
 	@printf '\n产物\n'
 	@for f in "$(DATASETS)/mt_train.pt" "$(DATASETS)/mt_dev.pt" \
 	          "$(DATASETS)/csc_train.pt" "$(DATASETS)/csc_test.pt" \
-	          "$(CORPUS)" "$(CKPT)/config.json"; do \
+	          "$(CORPUS)" "$(CKPT_DIR)/config.json"; do \
 	    if [ -e "$$f" ]; then printf '  ✓ %s\n' "$$f"; \
 	    else printf '  ✗ %s\n' "$$f"; fi; done
 
@@ -131,8 +137,8 @@ pretrain: $(CORPUS)
 finetune: finetune-mt finetune-csc
 
 check-ckpt:
-	@[ -e "$(CKPT)/config.json" ] || { \
-	    echo "没有 $(CKPT)。先 make pretrain,或者用 HF 上的骨干:"; \
+	@[ -e "$(CKPT_DIR)/config.json" ] || { \
+	    echo "没有 $(CKPT_DIR)。先 make pretrain,或者用 HF 上的骨干:"; \
 	    echo "  huggingface-cli download Ismantic/$(NAME) --local-dir models/$(NAME)"; \
 	    echo "  make finetune CKPT=models/$(NAME)"; exit 1; }
 
@@ -141,7 +147,7 @@ check-ckpt:
 # --dev_limit 2000 与报告指标的口径一致。
 finetune-mt: check-ckpt $(DATASETS)/mt_train.pt
 	cd $(ROOT) && $(PY) -m src.finetune_mt \
-	    --ckpt_dir $(CKPT) \
+	    --ckpt_dir $(CKPT_DIR) \
 	    --train_data $(DATASETS)/mt_train.pt --dev_data $(DATASETS)/mt_dev.pt \
 	    --output_dir $(OUT)/mt_$(SIZE) \
 	    --epochs 5 --batch_size 64 --bert_lr 2e-5 --head_lr 5e-4 \
@@ -150,7 +156,7 @@ finetune-mt: check-ckpt $(DATASETS)/mt_train.pt
 
 finetune-csc: check-ckpt $(DATASETS)/csc_train.pt
 	cd $(ROOT) && $(PY) -m src.finetune_csc \
-	    --ckpt_dir $(CKPT) \
+	    --ckpt_dir $(CKPT_DIR) \
 	    --train_data $(DATASETS)/csc_train.pt --test_data $(DATASETS)/csc_test.pt \
 	    --output_dir $(OUT)/csc_$(SIZE) \
 	    --epochs $(CSC_EPOCHS) --batch_size $(CSC_BATCH) --lr $(CSC_LR) \

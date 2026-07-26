@@ -56,6 +56,9 @@ python -m src.pretrain / src.finetune_mt / src.finetune_csc
 
 - venv:`/home/tfbao/.venv/bin/python`(Python 3.14,torch 2.11+cu13)。
   **用 `uv pip install`,这个 venv 里没有 pip。**
+  Makefile 的 `PY` 默认是 `$$VIRTUAL_ENV/bin/python` 或 `python3` —— 本机靠
+  gitignore 的 `local.mk`(`PY = /home/tfbao/.venv/bin/python`)指过去。
+  **不要把这个路径写回 Makefile**,那样别的机器上就跑不了。
 - GPU:单张 RTX 4090(24GB,bf16)。**没有多卡代码路径。**
 - 两个 C++ 依赖用 `bash prepare/install_deps.sh` 装,会 clone 到 `deps/`:
   - **PieceTokenizer** 提供字级分词器**和词表**。词表是

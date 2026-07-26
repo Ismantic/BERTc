@@ -22,7 +22,8 @@
 # 需要 cmake、C++17 编译器、git。用 uv pip,这个 venv 里没有 pip。
 set -euo pipefail
 
-PY=${BERTC_PYTHON:-/home/tfbao/.venv/bin/python}
+PY=${BERTC_PYTHON:-${VIRTUAL_ENV:+$VIRTUAL_ENV/bin/python}}
+PY=${PY:-python3}
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEPS_DIR=${BERTC_DEPS_DIR:-$REPO_ROOT/deps}
 
