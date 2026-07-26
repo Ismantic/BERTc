@@ -61,9 +61,9 @@ make -C data status              # 看下齐了没
 | SkyPile | 21 个 jsonl(全量 437 个 / 665 GB) | 中 |
 | CCI3-HQ | 5 个 jsonl | 中 |
 | Chinese-FineWeb-Edu | `4_5/` 前 500 个 parquet(全量 9745) | 中 |
-| finewiki zhwiki | 全 5 个 parquet | 中 |
+| FineWiki zhwiki | 全 5 个 parquet | 中 |
 | PeopleDaily | 全量(1946–2025) | 中 |
-| finewiki enwiki | 全 15 个 parquet | 英 |
+| FineWiki enwiki | 全 15 个 parquet | 英 |
 | CnnDailyMail | 全量 | 英 |
 
 用量默认值是 v4-Large 实跑时的量,不是随手定的 —— 这几个源在 HF 上都是几百
