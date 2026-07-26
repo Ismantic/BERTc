@@ -38,10 +38,8 @@ Chinese-FineWeb-Edu 9745 个 parquet),不能无参数 `snapshot_download`。
 | 源 | 出处 | 提供 |
 |---|---|---|
 | PD-1998 | Wapic 仓库自带 `data/PeopleDaily1998.zip` | CWS / POS / NER 标注 |
-| CTCDataset | GitHub `zejunwang1/CTCDataset` | CSC 主力:CCTC / CTC2021 / MCSCSet / ECSpell / lemon / cscd-ns / sighan / yacsc / Wang271k |
-| MCSCSet | GitHub `yzhihao/MCSCSet` | 医疗 CSC 专家标注 199,763 条 |
-| Wang271K | HF `shibing624/CSC` | CSC 标准训练集 |
-| chinese_text_correction | HF `shibing624/chinese_text_correction` | 14 个 tsv |
+| CTCDataset | GitHub `zejunwang1/CTCDataset` | SIGHAN 13/14/15 训练集(只取这 3 个 jsonl) |
+| Wang271K | HF `shibing624/CSC` | CSC 标准训练集(只取 `train.json`) |
 | SIGHAN-15 测试集 | GitHub `shibing624/pycorrector` | 官方 707 条 |
 
 两个坑:
@@ -58,18 +56,22 @@ Chinese-FineWeb-Edu 9745 个 parquet),不能无参数 `snapshot_download`。
 
 ## CSC 配方
 
-`make -C data process-csc` 默认产出 `sighan_wang271k`,已发布模型用的就是这份:
-`wang271k/train` + `sighan 13/14/15` 的 train,去重后 **249,975 对**。
+`make -C data process-csc` 按四个文件合并,顺序即去重优先级:
 
-`make -C data process-csc-all` 产出 `all` 配方,扫全部源得 82.6 万对,
-数据多 3.3 倍、训练时间也是 3.3 倍,效果未验证。合并规则:
+```
+wang271k/train.json                       248,782
+CTCDataset/sighan/sighan13_train.jsonl        350
+CTCDataset/sighan/sighan14_train.jsonl        506
+CTCDataset/sighan/sighan15_train.jsonl        337
+                                    去重后 249,975 对
+```
 
-1. 扫全部源,含两个易漏的 `.jsonl.gz`(`CTC2021/train_large_v2` 10.2 万对、
-   `Wang271k/data` 26.8 万对)
-2. **等长过滤** `len(src) == len(tgt)`。CSC 是同音 / 形似字的等长替换,
-   含增删的语法错误进来只会干扰
-3. 整文件排除 `NLPCC2023/grammar/`(HSK + MuCGEC,语法纠错)、`val_bak`、
-   以及 SIGHAN-15 测试集
+已发布的 CSC 模型(F1 0.8346)用的就是这份。
+
+**等长过滤** `len(src) == len(tgt)`:CSC 是同音 / 形似字的等长替换,含增删的
+语法错误进来只会干扰。
+
+同时把 SIGHAN-15 官方 707 条从下载目录原样拷到 `derived/csc/`,评测直接读那份。
 
 PD-1998 完全可复现:重新 clone Wapic → `process_cws.py`,产出的 6 份 jsonl
 与已发布 MT 模型的实际训练输入逐字节相同。Wapic 里那份 zip 与上游

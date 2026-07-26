@@ -38,7 +38,8 @@ class Source:
     kind:
       hf          HF 数据集,按 allow_patterns 选文件、按 n_parts 截断
       hf-snapshot HF 数据集,整仓下载(小仓库)
-      github-file GitHub 单文件(raw.githubusercontent),zip 自动解压
+      github-file GitHub 上的一个或几个文件(raw.githubusercontent),zip 自动解压。
+                  多文件时用 paths 列清单,part_glob 只用来数 present()
       github-repo GitHub 仓库,git clone --depth 1
       dep-file    已 clone 的 C++ 依赖里自带的文件(见 dep_file),zip 自动解压
     """
@@ -49,6 +50,7 @@ class Source:
     part_glob: str                 # 相对 dir();github-file 时就是文件名
     n_parts: int | None = None     # None = 全量
     allow_patterns: list[str] = field(default_factory=list)
+    paths: list[str] = field(default_factory=list)   # github-file 专用:要下的文件清单
     dep_file: str = ""             # dep-file 专用,相对 DEPS_DIR
     note: str = ""
 
@@ -135,41 +137,32 @@ FINETUNE_SOURCES = {
     ),
 }
 
-# CSC 的数据源。合并规则见 data/process_csc.py;
-# 这几个源之间有重叠(比如 CTCDataset 里的 lemon 和 sighan 与别处重复),
-# 合并去重的规则见 data/process_csc.py。
+# CSC 的数据源。只登记已发布模型实际用到的那几个文件 —— 合并配方见
+# data/process_csc.py 的 SIGHAN_WANG271K。
 CSC_SOURCES = {
-    "ctc_dataset": Source(
-        name="ctc_dataset", kind="github-repo", repo_id="zejunwang1/CTCDataset",
-        subdir="csc/CTCDataset", part_glob="**/*.jsonl*", n_parts=None,
-        note="中文文本纠错数据集汇总:CCTC / CTC2021 / MCSCSet / ECSpell / "
-             "lemon / cscd-ns / sighan / yacsc / Wang271k。CSC 的主力,"
-             "光 CTC2021/train_large_v2.jsonl.gz 就贡献 10 万对。",
-    ),
-    "mcscset": Source(
-        name="mcscset", kind="github-repo", repo_id="yzhihao/MCSCSet",
-        subdir="csc/MCSCSet", part_glob="**/annotated_data.txt", n_parts=None,
-        note="医疗领域 CSC,专家标注 199,763 条。CTCDataset 里的 MCSCSet 是"
-             "过滤后的子集,这份原始标注另有 5.9 万对独有内容。",
+    "ctc_sighan": Source(
+        name="ctc_sighan", kind="github-file", repo_id="zejunwang1/CTCDataset",
+        subdir="csc/CTCDataset", part_glob="sighan/sighan1?_train.jsonl",
+        paths=["sighan/sighan13_train.jsonl",
+               "sighan/sighan14_train.jsonl",
+               "sighan/sighan15_train.jsonl"],
+        note="SIGHAN 13/14/15 的训练集。只取这三个文件,不 clone 整仓 —— "
+             "CTCDataset 全量 234 MB,其余的源当前配方用不上。",
     ),
     "wang271k": Source(
-        name="wang271k", kind="hf-snapshot", repo_id="shibing624/CSC",
-        subdir="csc/wang271k", part_glob="*.json", n_parts=None,
-        note="Wang271K + SIGHAN,MacBERT4CSC 的标准训练集,27.6 万对。",
+        name="wang271k", kind="hf", repo_id="shibing624/CSC",
+        subdir="csc/wang271k", part_glob="train.json", n_parts=None,
+        allow_patterns=["train.json"],
+        note="Wang271K + SIGHAN,MacBERT4CSC 的标准训练集,27.6 万对。"
+             "同仓的 dev.json / test.json 用不上,不下。",
     ),
     "sighan15_test": Source(
         name="sighan15_test", kind="github-file", repo_id="shibing624/pycorrector",
         subdir="csc/sighan15", part_glob="pycorrector/data/sighan2015_test.tsv",
         n_parts=None,
         note="SIGHAN-15 官方 707 条测试集(pycorrector vendored 的那份)。"
-             "这是 CSC 的**权威基准**,报告的 F1 全部基于它 —— 注意 CTCDataset "
-             "里的 sighan15_test.jsonl 是 1100 条的另一个版本,不能混用。",
-    ),
-    "chinese_text_correction": Source(
-        name="chinese_text_correction", kind="hf-snapshot",
-        repo_id="shibing624/chinese_text_correction",
-        subdir="csc/shibing624", part_glob="*.tsv", n_parts=None,
-        note="cscd_ns / medical_csc / lemon_* / ec_* 等 14 个 tsv。",
+             "报告的 F1 全部基于它 —— 注意 CTCDataset 里的 sighan15_test.jsonl "
+             "是 1100 条的另一个版本,不能混用。",
     ),
 }
 

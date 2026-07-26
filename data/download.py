@@ -144,34 +144,36 @@ def download_github(src: source.Source, dry: bool) -> None:
     import urllib.request
 
     dest = source.DATA_ROOT / src.subdir
-    fname = src.part_glob                    # 文件名,可带子路径
-    url = f"https://raw.githubusercontent.com/{src.repo_id}/master/{fname}"
-    target = dest / fname
-    target.parent.mkdir(parents=True, exist_ok=True)
-    print(f"  {url} → {target}")
-    if dry:
-        return
-    dest.mkdir(parents=True, exist_ok=True)
-    if not target.exists():
-        # GitHub 需要代理(跟 hf-mirror 相反),用回模块加载时存下的那份
-        opener = urllib.request.build_opener(
-            urllib.request.ProxyHandler(
-                {k.replace("_proxy", "").replace("_PROXY", "").lower(): v
-                 for k, v in SAVED_PROXY.items()}))
-        with opener.open(url, timeout=120) as resp, open(target, "wb") as f:
-            f.write(resp.read())
-        print(f"    下载完成 {target.stat().st_size / 1e6:.1f} MB")
-    else:
-        print("    已存在,跳过下载")
+    # 多文件用 paths 列清单;单文件时 part_glob 就是文件名
+    fnames = src.paths or [src.part_glob]
+    # GitHub 需要代理(跟 hf-mirror 相反),用回模块加载时存下的那份
+    opener = urllib.request.build_opener(
+        urllib.request.ProxyHandler(
+            {k.replace("_proxy", "").replace("_PROXY", "").lower(): v
+             for k, v in SAVED_PROXY.items()}))
 
-    if target.suffix == ".zip":
-        with zipfile.ZipFile(target) as zf:
-            names = zf.namelist()
-            if all((dest / n).exists() for n in names):
-                print("    已解压,跳过")
-            else:
-                zf.extractall(dest)
-                print(f"    解压 {len(names)} 项 → {dest}")
+    for fname in fnames:
+        url = f"https://raw.githubusercontent.com/{src.repo_id}/master/{fname}"
+        target = dest / fname
+        print(f"  {url} → {target}")
+        if dry:
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if not target.exists():
+            with opener.open(url, timeout=120) as resp, open(target, "wb") as f:
+                f.write(resp.read())
+            print(f"    下载完成 {target.stat().st_size / 1e6:.1f} MB")
+        else:
+            print("    已存在,跳过下载")
+
+        if target.suffix == ".zip":
+            with zipfile.ZipFile(target) as zf:
+                names = zf.namelist()
+                if all((dest / n).exists() for n in names):
+                    print("    已解压,跳过")
+                else:
+                    zf.extractall(dest)
+                    print(f"    解压 {len(names)} 项 → {dest}")
 
 
 def unpack_dep(src: source.Source, dry: bool) -> None:

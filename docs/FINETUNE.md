@@ -149,7 +149,7 @@ print(model.predict("中国科学院计算技术研究所在北京"))
 ### 准备数据
 
 ```bash
-python data/download.py --csc         # 5 个公开源
+python data/download.py --csc         # 3 个公开源
 python data/process_csc.py            # 合并去重 → 句对 pkl
 python -m prepare.build_csc           # → 预编码数据集
 ```
@@ -157,14 +157,14 @@ python -m prepare.build_csc           # → 预编码数据集
 产出:
 
 ```
-prepare/datasets/csc_train.pt   826,200 对
+prepare/datasets/csc_train.pt   249,975 对
 prepare/datasets/csc_test.pt        707 条(SIGHAN-15 官方)
 ```
 
-数据来自 5 个源:`zejunwang1/CTCDataset`、`yzhihao/MCSCSet`、
-`shibing624/CSC`、`shibing624/chinese_text_correction`,测试集来自
-`shibing624/pycorrector`。合并规则见 `data/process_csc.py` —— 只保留
-**等长**的句对(狭义 CSC),语法纠错类的源整体排除。
+训练数据是 `shibing624/CSC` 的 `train.json` 加上 `zejunwang1/CTCDataset` 里
+SIGHAN 13/14/15 的三个训练集,去重后 249,975 对;测试集来自
+`shibing624/pycorrector`。只保留**等长**的句对(狭义 CSC)。
+清单见 `data/process_csc.py` 的 `SIGHAN_WANG271K`。
 
 ### 训练
 

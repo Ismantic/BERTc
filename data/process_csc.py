@@ -1,191 +1,33 @@
-"""把 data/downloads/csc/ 下所有 CSC 源统一成 (错句, 正句) 对,去重后写 pkl。
+"""把 CSC 源合并成 (错句, 正句) 对,去重后写 pkl。
 
-把五个公开源合并成一份训练数据。三条规则:
+配方 sighan_wang271k —— 已发布的 CSC 模型(F1 0.8346)用的就是这份:
 
-1. **扫 raw/ 下全部源**,包括两个容易漏的 `.jsonl.gz`
-   (CTC2021/train_large_v2 贡献 10.2 万对,Wang271k/data 是全量 26.8 万)
-2. **等长过滤** `len(src) == len(tgt)` —— 原 pkl 826,097 对里不等长的有 0 个。
-   BERTc-CSC 做的是狭义 CSC(同音/形似字的等长替换),增删类的语法错误不要。
-   佐证:CTC2021 等长部分 101,950 对 100% 在原 pkl,不等长部分 115,667 对 0% 在。
-3. **整文件排除** EXCLUDE_PATTERNS 里那几个源(见下)
+    wang271k/train.json                     Wang271K + SIGHAN,27.6 万对
+    CTCDataset/sighan/sighan13_train.jsonl  SIGHAN-13 训练集
+    CTCDataset/sighan/sighan14_train.jsonl  SIGHAN-14 训练集
+    CTCDataset/sighan/sighan15_train.jsonl  SIGHAN-15 训练集
 
-三条都加上后重建 826,205 对 vs 原 826,097 对,双向重合 99.96%
-(重建独有 470 / 原有独有 362,是空白与全半角规范化的边角差异)。
+按上面的顺序读,先到先得(顺序即去重优先级),等长过滤后 249,975 对。
 
-各源格式:
-  *.json          list of {original_text, correct_text}      (wang271k_csc)
-  *.jsonl[.gz]    {source, target, label}                    (CTCDataset)
-  *.sgml          <TEXT> + <MISTAKE><LOCATION|WRONG|CORRECTION>  (wang271k_raw)
-  *.tsv / *.txt   src<TAB>tgt[<TAB>type]                     (其余)
-坑:
-  - CTCDataset 下两个 .jsonl.gz(CTC2021/train_large_v2、Wang271k/data)
-    是主力源之一,漏掉会缺 10 万对
-  - mcsc_* / shibing624 是 CRLF,不 strip 会让 tgt 带 \r
-  - mcsc_set 用 {} 标出错误片段,要去掉
-  - shibing624/*.tsv 有表头 source/target/type
-  - 下载失败会在目录里留下 HTML 错误页,要能识别并跳过
+**等长过滤** `len(src) == len(tgt)`:BERTc-CSC 做的是狭义 CSC —— 同音 / 形似字
+的等长替换。增删类的语法错误进来只会干扰。
 
-两个配方:
-
-  sighan_wang271k  wang271k/train + sighan 13/14/15 的 train,去重后 249,978 对。
-                   **已发布的 CSC 模型(F1 0.8346)用的是这份。**
-  all              扫 raw 下全部源,去重后约 82.6 万对。数据多 3.3 倍,
-                   训练时间也是 3.3 倍,效果如何还没验证过。
+格式:
+  *.json    list of {original_text, correct_text}
+  *.jsonl   {source, target, label}
 
 用法:
-    python data/process_csc.py                        # 默认 sighan_wang271k
-    python data/process_csc.py --recipe all           # 全部源
-    python data/process_csc.py --verify               # 只统计,不写文件
+    python data/process_csc.py             # 写 data/derived/csc/*.pkl
+    python data/process_csc.py --verify    # 只统计,不写文件
 """
 import argparse
-import gzip
 import json
 import pickle
-import re
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import source
-
-# 明显是下载失败残留的目录(内容为 HTML 错误页 / "404: Not Found")
-JUNK_MARKERS = ("404: Not Found", "Invalid username or password.", "<!DOCTYPE", "<html")
-
-# all 配方要整文件排除的源:语法纠错不是同音/形似字替换,混进来会污染训练。
-EXCLUDE_PATTERNS = [
-    "NLPCC2023/grammar/",   # HSK 10.4 万 + MuCGEC —— 语法纠错,非同音/形似字替换
-    "val_bak",              # 备份文件
-    "sighan15/",            # SIGHAN-15 官方测试集,不能混进训练数据
-    "/.git/",               # clone 下来的仓库元数据
-]
-
-# 行式 src<TAB>tgt 的文件。MCSCSet 的 annotated_data.txt 带 {} 错误标记 + 第三列。
-TSV_PATTERNS = ["shibing624/*.tsv", "MCSCSet/**/annotated_data.txt"]
-
-
-def _clean(s: str) -> str:
-    """去掉 CRLF 残留和 MCSCSet 的 {} 错误标记。"""
-    return s.strip().replace("{", "").replace("}", "")
-
-
-def _open(path: Path):
-    """透明处理 .gz。"""
-    if path.suffix == ".gz":
-        return gzip.open(path, "rt", encoding="utf8", errors="ignore")
-    return open(path, encoding="utf8", errors="ignore")
-
-
-def _is_excluded(path: Path, raw_dir: Path) -> bool:
-    rel = str(path.relative_to(raw_dir))
-    return any(pat in rel for pat in EXCLUDE_PATTERNS)
-
-
-def _is_junk(path: Path) -> bool:
-    if path.suffix == ".gz":
-        return False
-    try:
-        head = path.read_text(encoding="utf8", errors="ignore")[:200]
-    except OSError:
-        return True
-    return any(m in head for m in JUNK_MARKERS)
-
-
-def load_json(path: Path):
-    for it in json.load(open(path, encoding="utf8")):
-        src, tgt = it.get("original_text"), it.get("correct_text")
-        if src and tgt:
-            yield _clean(src), _clean(tgt)
-
-
-def load_jsonl(path: Path):
-    for line in _open(path):
-        try:
-            it = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        src = it.get("source") or it.get("original_text") or it.get("text")
-        tgt = it.get("target") or it.get("correct_text") or it.get("correct")
-        if src and tgt:
-            yield _clean(src), _clean(tgt)
-
-
-def load_sgml(path: Path):
-    """Wang271K 原始 SGML:一个 <SENTENCE> 里 <TEXT> 是错句,
-    每个 <MISTAKE> 给出 1-based 位置 + 错字 + 正字,逐个替换得正句。"""
-    text = path.read_text(encoding="utf8", errors="ignore")
-    for block in re.findall(r"<SENTENCE>(.*?)</SENTENCE>", text, re.S):
-        m = re.search(r"<TEXT>(.*?)</TEXT>", block, re.S)
-        if not m:
-            continue
-        src = _clean(m.group(1))
-        chars = list(src)
-        for loc, wrong, corr in re.findall(
-                r"<LOCATION>(\d+)</LOCATION>\s*<WRONG>(.*?)</WRONG>\s*"
-                r"<CORRECTION>(.*?)</CORRECTION>", block, re.S):
-            i = int(loc) - 1
-            wrong, corr = wrong.strip(), corr.strip()
-            if 0 <= i < len(chars) and chars[i] == wrong and len(corr) == 1:
-                chars[i] = corr
-        tgt = "".join(chars)
-        if src and tgt:
-            yield src, tgt
-
-
-def load_tsv(path: Path):
-    for i, line in enumerate(open(path, encoding="utf8", errors="ignore")):
-        fields = line.rstrip("\r\n").split("\t")
-        if len(fields) < 2:
-            continue
-        src, tgt = _clean(fields[0]), _clean(fields[1])
-        if i == 0 and src == "source" and tgt == "target":   # 表头
-            continue
-        if src and tgt:
-            yield src, tgt
-
-
-def collect(raw_dir: Path, equal_length: bool = True,
-            apply_excludes: bool = True) -> tuple[list, dict]:
-    """扫全部源,返回 (去重后的 pair 列表, 每个文件的贡献数)。
-
-    equal_length=True 只保留 len(src)==len(tgt) 的对 —— 狭义 CSC 的定义。
-    """
-    stats = {}
-    seen, pairs = set(), []
-
-    def skip(path: Path) -> bool:
-        return _is_junk(path) or (apply_excludes and _is_excluded(path, raw_dir))
-
-    def add(path: Path, it):
-        n_new = 0
-        for pair in it:
-            if equal_length and len(pair[0]) != len(pair[1]):
-                continue
-            if pair not in seen:
-                seen.add(pair)
-                pairs.append(pair)
-                n_new += 1
-        stats[str(path.relative_to(raw_dir))] = n_new
-
-    for path in sorted(raw_dir.glob("*/*.json")):
-        if skip(path):
-            continue
-        add(path, load_json(path))
-    for pat in ("**/*.jsonl", "**/*.jsonl.gz"):
-        for path in sorted(raw_dir.glob(pat)):
-            if skip(path):
-                continue
-            add(path, load_jsonl(path))
-    for path in sorted(raw_dir.glob("**/*.sgml")):
-        if skip(path):
-            continue
-        add(path, load_sgml(path))
-    for pat in TSV_PATTERNS:
-        for path in sorted(raw_dir.glob(pat)):
-            if skip(path):
-                continue
-            add(path, load_tsv(path))
-    return pairs, stats
-
 
 # 已发布模型实际用的配方。顺序即去重优先级。
 SIGHAN_WANG271K = [
@@ -196,16 +38,39 @@ SIGHAN_WANG271K = [
 ]
 
 
-def collect_recipe(raw_dir: Path, files: list[str],
-                   equal_length: bool = True) -> tuple[list, dict]:
-    """按给定文件清单收集,不扫整个目录。"""
+def _clean(s: str) -> str:
+    """去掉 CRLF 残留。这四个文件里有 4 对带尾随空白。"""
+    return s.strip()
+
+
+def load_json(path: Path):
+    for it in json.load(open(path, encoding="utf8")):
+        src, tgt = it.get("original_text"), it.get("correct_text")
+        if src and tgt:
+            yield _clean(src), _clean(tgt)
+
+
+def load_jsonl(path: Path):
+    for line in open(path, encoding="utf8", errors="ignore"):
+        try:
+            it = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        src = it.get("source") or it.get("original_text") or it.get("text")
+        tgt = it.get("target") or it.get("correct_text") or it.get("correct")
+        if src and tgt:
+            yield _clean(src), _clean(tgt)
+
+
+def collect(raw_dir: Path, files: list[str],
+            equal_length: bool = True) -> tuple[list, dict]:
+    """按给定文件清单收集,返回 (去重后的 pair 列表, 每个文件的贡献数)。"""
     stats, seen, pairs = {}, set(), []
     for rel in files:
         path = raw_dir / rel
         if not path.exists():
             sys.exit(f"缺少 {path} —— 先跑 python data/download.py --csc")
-        loader = (load_json if path.suffix == ".json" else
-                  load_jsonl if ".jsonl" in path.name else load_tsv)
+        loader = load_json if path.suffix == ".json" else load_jsonl
         n_new = 0
         for pair in loader(path):
             if equal_length and len(pair[0]) != len(pair[1]):
@@ -221,62 +86,52 @@ def collect_recipe(raw_dir: Path, files: list[str],
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--raw-dir", type=Path,
-                    default=source.DATA_ROOT / "csc")
+    ap.add_argument("--raw-dir", type=Path, default=source.DATA_ROOT / "csc")
     ap.add_argument("--output", type=Path, default=None,
-                    help="默认按配方命名放到 data/derived/csc/")
-    ap.add_argument("--verify", action="store_true",
-                    help="只统计,不写文件")
-    ap.add_argument("--recipe", choices=("sighan_wang271k", "all"),
-                    default="sighan_wang271k",
-                    help="sighan_wang271k = 已发布模型用的那份(24.9 万对);"
-                         "all = 扫全部源(82.6 万对)")
-    ap.add_argument("--top", type=int, default=20, help="打印贡献最多的 N 个文件")
+                    help=f"默认 {source.CSC_PAIRS}")
+    ap.add_argument("--verify", action="store_true", help="只统计,不写文件")
     ap.add_argument("--no-length-filter", action="store_true",
-                    help="不做等长过滤(会混入增删类语法错误,与原 pkl 口径不符)")
-    ap.add_argument("--no-excludes", action="store_true",
-                    help="不排除 EXCLUDE_PATTERNS 里的源(会多出 12.6 万对语法/重复数据)")
+                    help="不做等长过滤(会混入增删类语法错误,与已发布口径不符)")
     args = ap.parse_args()
 
     if args.output is None:
-        args.output = (source.CSC_PAIRS if args.recipe == "sighan_wang271k"
-                       else source.CSC_DIR / "all_pairs.pkl")   # all 配方的产出
+        args.output = source.CSC_PAIRS
     if not args.raw_dir.exists():
         sys.exit(f"raw 目录不存在: {args.raw_dir} —— 先跑 python data/download.py --csc")
 
-    if args.recipe == "sighan_wang271k":
-        print(f"配方 sighan_wang271k({len(SIGHAN_WANG271K)} 个文件)")
-        pairs, stats = collect_recipe(args.raw_dir, SIGHAN_WANG271K,
-                                      equal_length=not args.no_length_filter)
-    else:
-        print(f"配方 all:扫描 {args.raw_dir} ...")
-        pairs, stats = collect(args.raw_dir,
-                               equal_length=not args.no_length_filter,
-                               apply_excludes=not args.no_excludes)
-    print(f"\n去重后 {len(pairs):,} 对,来自 {len(stats)} 个文件")
-    print(f"\n贡献最多的 {args.top} 个:")
-    for name, n in sorted(stats.items(), key=lambda kv: -kv[1])[:args.top]:
+    print(f"配方 sighan_wang271k({len(SIGHAN_WANG271K)} 个文件)")
+    pairs, stats = collect(args.raw_dir, SIGHAN_WANG271K,
+                           equal_length=not args.no_length_filter)
+    print(f"\n去重后 {len(pairs):,} 对")
+    for name, n in stats.items():
         print(f"  {n:>8,}  {name}")
 
-    ref = source.CSC_PAIRS if args.output != source.CSC_PAIRS else Path("/nonexistent")
-    if ref.exists():
-        with open(ref, "rb") as f:
+    if args.output.exists():
+        with open(args.output, "rb") as f:
             old = set(pickle.load(f))
         new = set(pairs)
-        print(f"\n对照 {ref.name}: {len(old):,} 对")
+        print(f"\n对照已有 {args.output.name}: {len(old):,} 对")
         print(f"  重建 ∩ 原有 = {len(new & old):,} "
               f"(原有的 {len(new & old) / len(old):.2%})")
         print(f"  重建独有   = {len(new - old):,}")
         print(f"  原有独有   = {len(old - new):,}")
 
     if args.verify:
-        print("\n--verify:未写文件。")
+        print("\n--verify:不写文件")
         return
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with open(args.output, "wb") as f:
         pickle.dump(pairs, f)
-    print(f"\n写入 {len(pairs):,} 对 -> {args.output}")
+    print(f"\n写出 {len(pairs):,} 对 → {args.output}")
+
+    # SIGHAN-15 官方测试集原样拷一份到 derived/,评测直接读这里
+    test_src = source.ALL_SOURCES["sighan15_test"].files()
+    if test_src:
+        source.SIGHAN_TEST.parent.mkdir(parents=True, exist_ok=True)
+        source.SIGHAN_TEST.write_bytes(test_src[0].read_bytes())
+        n = len(source.SIGHAN_TEST.read_text(encoding="utf8").splitlines())
+        print(f"测试集 {n} 条 → {source.SIGHAN_TEST}")
 
 
 if __name__ == "__main__":

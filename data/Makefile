@@ -65,13 +65,10 @@ process-docs:
 process-cws:
 	$(PY) $(HERE)process_cws.py
 
-# CSC 各源 → (错句, 正句) 对。默认 sighan_wang271k 配方(已发布模型用的那份);
-# 想要全部源(82.6 万对)用 make process-csc-all
+# CSC 四个源文件 → (错句, 正句) 对,249,975 对(已发布模型用的那份),
+# 同时把 SIGHAN-15 官方 707 条拷到 derived/
 process-csc:
 	$(PY) $(HERE)process_csc.py
-
-process-csc-all:
-	$(PY) $(HERE)process_csc.py --recipe all
 
 # ---------------------------------------------------------------- 清理
 
