@@ -1,6 +1,6 @@
 # BERTc
 
-字级中文 Modern BERT,从零预训练,纯 PyTorch 实现。
+中文 Modern BERT,由零预训练,纯 PyTorch 实现。
 
 包含从下载语料到发布上 Hugging Face 的完整流程:数据获取与加工、词表与预编码、
 预训练、微调、导出发布。模型与训练代码(`src/`)只依赖 torch —— CRF、优化器、
