@@ -3,10 +3,15 @@
 把 checkpoint 打包成可直接上传 Hugging Face 的目录,并上传。
 
 ```bash
-python -m save.export --list                          # 哪些 checkpoint 就位
-python -m save.export                                 # 导出全部六个
-python test/test_save.py                              # 验证发布目录能独立跑
-python -m save.upload --namespace Ismantic --dry-run  # 先看要传什么
+make -C save help          # 全部命令
+make -C save status        # 哪些 checkpoint 就位
+```
+
+改了推理代码或模型卡之后的标准流程(权重不动):
+
+```bash
+make -C save code && make -C save verify && make -C save dry-run
+make -C save upload-code
 ```
 
 ## 六个仓库

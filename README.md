@@ -132,7 +132,6 @@ make -C prepare status      # 每一步产物在不在
 | [`docs/PRETRAIN.md`](docs/PRETRAIN.md) | 预训练全流程,含每步耗时和磁盘占用 |
 | [`docs/FINETUNE.md`](docs/FINETUNE.md) | 微调全流程 |
 | [`docs/WHY.md`](docs/WHY.md) | 各处设计选择的理由,以及改错了不报错的地方 |
-| [`docs/TODO.md`](docs/TODO.md) | 想做没做的实验 |
 | [`src/README.md`](src/README.md) | `src/` 各模块的导读 |
 
 ## 环境

@@ -73,6 +73,11 @@ CTCDataset/sighan/sighan15_train.jsonl        337
 
 同时把 SIGHAN-15 官方 707 条从下载目录原样拷到 `derived/csc/`,评测直接读那份。
 
+曾经有过一个 `all` 配方,扫全部源得 82.6 万对。2026-07-26 下线了 —— 只服务于
+它的两个源(MCSCSet、chinese_text_correction)里,MCSCSet 一家贡献 28 万对医疗
+领域文本,领域分布与 SIGHAN-15 测试集相差很远,而训练时间是 3.3 倍(约 15 小时)。
+要复活得重新登记那两个源和整仓 CTCDataset,配方代码在提交 `40a1f35` 里。
+
 PD-1998 完全可复现:重新 clone Wapic → `process_cws.py`,产出的 6 份 jsonl
 与已发布 MT 模型的实际训练输入逐字节相同。Wapic 里那份 zip 与上游
 `chenhui-bupt/PeopleDaily1998` 的 `199801.zip` 也逐字节相同(SHA256
