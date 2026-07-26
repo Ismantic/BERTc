@@ -12,7 +12,7 @@
 # data/PeopleDaily1998.zip 里,拿它只需要 clone,不需要编译分词器。
 #
 # 仓库默认 clone 到 BERTC_DEPS_DIR(默认 <仓库>/deps),已有就 git pull。
-# 想用本机既有的 checkout:BERTC_DEPS_DIR=/home/tfbao/Shiyu bash prepare/install_deps.sh
+# 想用本机既有的 checkout:BERTC_DEPS_DIR=~/src bash prepare/install_deps.sh
 #
 # 装完自动跑 test/test_tokenizer.py 校验行为没变 —— 这一步不能跳:
 #   - PieceTokenizer 的编码一旦变了,12536 词表和已发布模型的 embedding 就对不上,

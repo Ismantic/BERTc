@@ -32,6 +32,16 @@ SAMPLES = [
 ]
 
 
+def _rel(path) -> str:
+    """记路径只为了让人知道基线抓自哪 —— 存绝对路径的话,换台机器一看就是
+    别人的目录,还会诱导别的代码去 load 它(test_tokenizer 就这么错过)。"""
+    p = Path(path)
+    try:
+        return str(p.relative_to(ROOT))
+    except ValueError:
+        return p.name
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -54,7 +64,7 @@ def main() -> int:
     tok.load(str(piece_model), dict="no")
     allp = " ".join(tok.id_to_piece(i) for i in range(tok.vocab_size()))
     out["piece"] = {
-        "model": str(piece_model),
+        "model": _rel(piece_model),
         "vocab_size": tok.vocab_size(),
         "vocab_sha256": hashlib.sha256(
             allp.encode("utf-8", "surrogatepass")).hexdigest(),
@@ -68,7 +78,7 @@ def main() -> int:
     import wapic
     seg = wapic.Segmenter(wac)
     out["wapic"] = {
-        "model": wac,
+        "model": _rel(wac),
         "api": "segment",          # 旧版叫 cut_smart,2026-07 的 Wapic 改名了
         "samples": [{"text": s, "words": seg.segment(s)} for s in SAMPLES],
     }

@@ -1,7 +1,7 @@
 {
   "note": "重建 PieceTokenizer / Wapic 前抓的行为基线,由 test/test_tokenizer.py 校验。",
   "piece": {
-    "model": "/home/tfbao/Shiyu/BERTc/deps/PieceTokenizer/save/BERTc-Tokenizer.pt",
+    "model": "deps/PieceTokenizer/save/BERTc-Tokenizer.pt",
     "vocab_size": 12535,
     "vocab_sha256": "d687e7bcb23d591dda85b5def1d5f97b4209778f9b27cf5a694f4fcc5dc9e750",
     "samples": [
@@ -367,7 +367,7 @@
     ]
   },
   "wapic": {
-    "model": "/home/tfbao/Shiyu/BERTc/deps/Wapic/data/model/wapic-cws.wac",
+    "model": "deps/Wapic/data/model/wapic-cws.wac",
     "api": "segment",
     "samples": [
       {

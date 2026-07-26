@@ -109,6 +109,29 @@ def check_no_stale_paths() -> list[str]:
     return bad
 
 
+def check_no_machine_paths() -> list[str]:
+    """扫写死的本机绝对路径 —— 别人 clone 下来就跑不了,而本机永远正常。
+
+    md 里写本机环境说明是可以的(那是给在这台机器上干活的人看的),
+    受版本控制的代码和 fixture 里不行。
+    """
+    import subprocess
+    tracked = subprocess.run(["git", "ls-files"], cwd=ROOT,
+                             capture_output=True, text=True).stdout.split()
+    bad = []
+    for rel in tracked:
+        if rel.endswith(".md"):
+            continue
+        f = ROOT / rel
+        if not f.is_file():
+            continue
+        txt = f.read_text(encoding="utf8", errors="ignore")
+        for i, line in enumerate(txt.splitlines(), 1):
+            if "/home/" in line and "$HOME" not in line:
+                bad.append(f"{rel}:{i} 写死了本机路径:{line.strip()[:70]}")
+    return bad
+
+
 def main() -> int:
     print("=== 每个中间产物都有生产者 ===")
     bad = check_dag()
@@ -118,6 +141,11 @@ def main() -> int:
     stale = check_no_stale_paths()
     print("  (无)" if not stale else "")
     bad += stale
+
+    print("\n=== 写死的本机路径 ===")
+    mine = check_no_machine_paths()
+    print("  (无)" if not mine else "")
+    bad += mine
 
     if bad:
         print(f"\n{len(bad)} 处问题:")

@@ -30,9 +30,19 @@ def check_piece(base: dict) -> int:
         print(f"  piece_tokenizer 导入失败:{e}")
         return 1
 
+    # 用和生产代码同一套定位逻辑找词表,**不要**用基线里记下的绝对路径 ——
+    # 那是抓基线那台机器上的路径,换台机器就不存在了。基线里的路径只当提示。
+    from prepare.tokenizer import default_piece_model
+    model = default_piece_model()
+    if not model.exists():
+        print(f"  找不到词表 {model}。跑 `bash prepare/install_deps.sh piece`")
+        return 1
+
     tok = pt.Tokenizer()
-    tok.load(base["model"], dict="no")
+    tok.load(str(model), dict="no")
     failures = 0
+    if str(model) != base["model"]:
+        print(f"  词表 {model.name}(基线抓自 {Path(base['model']).parent})")
 
     if tok.vocab_size() != base["vocab_size"]:
         print(f"  ✗ vocab_size {tok.vocab_size()} != 基线 {base['vocab_size']}")
