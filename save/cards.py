@@ -12,6 +12,24 @@ library_name: pytorch
 """
 
 _TOKENIZER_SECTION = """
+## 依赖
+
+只需要 **PyTorch** 和 **PieceTokenizer**,没有别的。
+
+| | |
+|---|---|
+| 模型定义 | 目录内的 `model.py`(纯 torch,不 import transformers) |
+| 权重读取 | 目录内的 `checkpoint.py`(85 行 safetensors 读取,不需要 safetensors 库) |
+| 分词器 | PieceTokenizer,提供字级切分和词表 |
+
+```bash
+pip install torch
+pip install git+https://github.com/Ismantic/PieceTokenizer
+```
+
+目录是自包含的:进到目录里直接 `python example_*.py` 就能跑,不依赖目录外的
+任何文件。
+
 ## Tokenizer
 
 字级 SentencePiece,`BERTc-Tokenizer.pt`,词表 12536(pad=12531,mask=12535)。**必须用 `dict="no"`
