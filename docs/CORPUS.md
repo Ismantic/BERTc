@@ -1,6 +1,13 @@
-# BERTc 预训练 corpus 详单
+# BERTc 预训练语料详单(历史存档)
 
-记录每个 backbone version 训练用了什么 corpus、用了多少,以便复现 + 排查 corpus overlap 问题。
+> **这是 2026-06 之前的历史记录,不是当前流程。** 里面的路径
+> (`/home/tfbao/a6000/...`、`train_v7_anneal.pt` 等)都已失效,
+> 当前的语料配置见 [`../data/README.md`](../data/README.md),
+> 预训练流程见 [`PRETRAIN.md`](PRETRAIN.md)。
+>
+> 留着是因为它记录了每个版本用了什么语料、为什么换 —— 其中最有价值的一条
+> 是 v6 的教训:**corpus 同源 = 收益接近零**(见下面 v6 一节),
+> 那是花一整轮训练换来的。
 
 ## 总览
 
