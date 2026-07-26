@@ -8,9 +8,9 @@ make -C data help       # 全部命令
 make -C data status     # 每个源下了没
 ```
 
-`source.py` 是数据源注册表,每个源的公开出处、用量、用途都在那里。它不接受
-「本机已有的目录」这类配置 —— 一旦允许本地跳过下载,别人克隆下来跑不通,
-而自己发现不了。
+`source.py` 是数据源注册表,记录每个源的公开出处、用量和用途。它不接受
+「本机已有的目录」这类配置:允许本地跳过下载,别人克隆下来就跑不通,
+而本机不会报错。
 
 ## 预训练语料
 
@@ -24,9 +24,9 @@ make -C data status     # 每个源下了没
 | PeopleDaily | HF `Papersnake/people_daily_news` | 全量(1946–2025) | 中 |
 | CnnDailyMail | HF `abisee/cnn_dailymail` | 全量 | 英 |
 
-合计约 79 GB,是已发布模型的实跑用量。`source.py` 里的 `n_parts` 控制取几个
-文件 —— 这几个源在 HF 上都是几百 GB 全量(SkyPile 665 GB、
-Chinese-FineWeb-Edu 9745 个 parquet),不能无参数 `snapshot_download`。
+合计约 79 GB,是已发布模型的实跑用量。`n_parts` 控制取几个文件。这几个源在
+HF 上都是几百 GB 全量(SkyPile 665 GB、Chinese-FineWeb-Edu 9745 个 parquet),
+**不要无参数 `snapshot_download`**。
 
 改 `n_parts` 后重跑 `make -C data download-pretrain`,已下载的会跳过。
 
@@ -42,14 +42,14 @@ Chinese-FineWeb-Edu 9745 个 parquet),不能无参数 `snapshot_download`。
 | Wang271K | HF `shibing624/CSC` | CSC 标准训练集(只取 `train.json`) |
 | SIGHAN-15 测试集 | GitHub `shibing624/pycorrector` | 官方 707 条 |
 
-两个坑:
+两点需要注意:
 
-- PD-1998 随 Wapic 一起 clone,不单独下载 —— 没 clone 过的话
-  `bash prepare/install_deps.sh wapic-data`(只 clone,不编译)。
-  解压出的目录名叫 `199801`,里面是 **199801.txt ~ 199806.txt 六个月**。
+- PD-1998 随 Wapic 一起 clone,不单独下载。没 clone 过用
+  `bash prepare/install_deps.sh wapic-data`(只 clone,不编译)。解压出的
+  目录名叫 `199801`,内容是 **199801.txt ~ 199806.txt 六个月**。
   train = 前 5 月(102,739 句),dev = 199806(21,143 句)
-- **SIGHAN-15 测试集有两个版本。** 用的是 707 条那版(PyCorrector 口径)。
-  CTCDataset 里的 `sighan15_test.jsonl` 是 1100 条的另一版,不能混用
+- **SIGHAN-15 测试集有两个版本。** 这里用 707 条那版(PyCorrector 口径)。
+  CTCDataset 里的 `sighan15_test.jsonl` 是 1100 条的另一版,两者不能混用
 
 `process.py` 和 `process_cws.py` 用的是两份不同的人民日报:前者是 1946–2025
 全文(喂预训练),后者是 1998 年 1–6 月的 PFR 标注语料(喂 MT 微调)。
@@ -80,8 +80,8 @@ PD-1998 完全可复现:重新 clone Wapic → `process_cws.py`,产出的 6 份 
 
 ## 代理
 
-HF 走 hf-mirror 必须清代理,GitHub 反过来必须走代理。`download.py` 在模块
-加载时存下代理配置,只在 GitHub 那条路径恢复。`HF_ENDPOINT=` 置空走 HF 官方源。
+HF 走 hf-mirror 需要清代理,GitHub 需要走代理。`download.py` 在模块加载时
+存下代理配置,只在 GitHub 那条路径恢复。`HF_ENDPOINT=` 置空走 HF 官方源。
 
 ## 文件
 

@@ -59,8 +59,8 @@ CSC 的检测头需要标注「这个位置错没错」。直觉写法是比对�
 
 ### 优化器的 no-decay 分组
 
-weight decay 不该作用在 bias 和 LayerNorm 参数上。分组写错了(比如按名字
-匹配漏了),训练不会报错。
+weight decay 不应作用在 bias 和 LayerNorm 参数上。分组写错(例如按名字匹配
+时遗漏),训练不会报错。
 
 检查方法:打印 no-decay 组的参数量。正确的话**只有两万多**(几百个 bias 和
 norm 向量),如果是几百万,说明把某些权重矩阵也划进去了。
@@ -74,7 +74,7 @@ norm 向量),如果是几百万,说明把某些权重矩阵也划进去了。
 | **LayerNorm 无 bias** | 带 bias | 少一组参数,效果无差别。ModernBERT 和 LLaMA 都这么做 |
 | **全部 Linear 无 bias** | 带 bias | 同上。bias 在有 LayerNorm 的架构里基本是冗余的 |
 | **pre-norm 且首层跳过** | post-norm | pre-norm 深层更稳。首层输入刚过 embedding 的 LayerNorm,再 norm 一次是浪费 |
-| **简化 MLM 头** | Dense + LN + GeLU + bias | `logits = h @ embed.weightᵀ`,就一个矩阵乘。原版 BERT 的 MLM 头有一整个变换块,微调时全部丢弃 —— 训练时花的算力白费了。**而且这个简化在下游有回报**,见下面 CSC 那条 |
+| **简化 MLM 头** | Dense + LN + GeLU + bias | `logits = h @ embed.weightᵀ`,只有一个矩阵乘。原版 BERT 的 MLM 头是一整个变换块,微调时全部丢弃,预训练在这部分的算力不产生收益。这个简化在下游另有作用,见 CSC 那条 |
 | **Megatron 初始化** | 标准 normal | 残差支路的输出投影按 ×1/√2L 缩放,深模型早期不容易炸 |
 | **无 dropout** | dropout 0.1 | 预训练数据量远大于参数量,不存在过拟合。dropout 只是在拖慢收敛 |
 | **绑定输入输出嵌入** | 独立 | 词表 12536 × 1024 ≈ 1300 万参数,占 165M 模型的 8%。绑定后省下来的参数放进层数更划算 |
@@ -104,7 +104,7 @@ grad clip 0.5
 | **StableAdamW** 而非 AdamW | 按每个张量的梯度 RMS 裁剪有效学习率,bf16 下明显更稳。实现见 [`src/optim.py`](../src/optim.py),152 行,能看清裁剪到底裁的是什么 |
 | **bias correction 折进 beta** | StableAdamW 的做法:不单独做修正,而是把它吸收进 β 的计算。少一处除法,数值上等价 |
 | **固定 15% 掩码** | 动态 curriculum(15→30→15)在 v3 试过,消融显示固定 15% 就拿到了双 SOTA。代码还在(`src/masking.py`),默认关 |
-| **梯度累积爬升** | 等价于 batch size warmup(Cramming 和 ModernBERT 都用)。前期小 batch 多做几次更新,后期大 batch 稳梯度。**注意它必须和 LR warmup 对齐** —— 两个 warmup 各算各的,会在前几百步产生实际学习率的意外组合 |
+| **梯度累积爬升** | 等价于 batch size warmup(Cramming 和 ModernBERT 都用)。前期小 batch 多做几次更新,后期大 batch 稳梯度。**需要与 LR warmup 对齐**:两个 warmup 独立计算,会在前几百步产生非预期的实际学习率组合 |
 | **grad clip 0.5** | 比常见的 1.0 更紧。24 层在早期容易出梯度尖峰 |
 | **warmup 6%** | Cramming 的推荐值 |
 | **不用 EMA** | v3 用过,v4 关掉 —— 8500 步这个长度收益不明显,还多占一份显存 |

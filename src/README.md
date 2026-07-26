@@ -17,7 +17,7 @@ checkpoint.py    85   safetensors 读写
 
 ## 阅读顺序
 
-`pretrain.py` 把所有部件串起来,先读容易被细节淹没。建议从小模块入手。
+`pretrain.py` 把所有部件串起来,先读会被细节干扰。按下面的顺序从小模块入手。
 
 **`checkpoint.py`** —— safetensors 的格式是三段:8 字节小端 uint64 表示头长度、
 一段 JSON 头、剩下是裸张量数据。
@@ -30,23 +30,24 @@ rms = grad.pow(2).div_(exp_avg_sq.maximum(eps_sq)).mean().sqrt()
 eff_lr = lr / max(1.0, rms)
 ```
 
-梯度相对于二阶动量估计偏大时按比例压学习率,这是 bf16 下更稳的原因。
+梯度相对于二阶动量估计偏大时按比例降低学习率,这是 bf16 下更稳定的原因。
 bias correction 折进 β 的计算,不单独修正。
 
-**`model.py`** —— 按 forward 的顺序读:嵌入 → N 层 → MLM 头。三处值得注意:
+**`model.py`** —— 按 forward 的顺序读:嵌入 → N 层 → MLM 头。三处与标准
+BERT 不同:
 
 - ScaledSinusoidal 位置编码在嵌入层加完,attention 里没有位置相关的代码
 - GeGLU 用两个投影矩阵 + 门控,所以中间层是 2752 而不是 4096(2/3 宽度补偿)
 - MLM 头只有 `logits = h @ embed.weight.T`,原版 BERT 这里有
   Dense + LayerNorm + GeLU + bias
 
-`flex_attention` 那部分可以先跳过,它解决的是「一个块里装了多篇文章」的工程
-问题,不影响理解 Transformer 本身。
+`flex_attention` 那部分可以先跳过。它处理的是「一个块里有多篇文档」的隔离
+问题,与 Transformer 本身无关。
 
-**`masking.py`** —— 整词掩码。语料打包成定长块,一个块里横跨多篇文章、
-几百个词,所以给每个 token 一个 word id(同一个词共享),按 word id 分组遮。
+**`masking.py`** —— 整词掩码。语料打包成定长块,一个块横跨多篇文档、
+数百个词,因此给每个 token 一个 word id(同一个词共享),按 word id 分组遮。
 
-word id 没生成对的话整词掩码会退化成逐字掩码,而且不报错。见
+**word id 生成错误时,整词掩码会退化成逐字掩码,且不报错。** 见
 [`docs/WHY.md`](../docs/WHY.md#整词掩码退化成逐字掩码)。
 
 **`crf.py`** —— CWS 和 NER 用 BIO 标注,相邻标签有硬约束(`I-` 不能跟在 `O`
@@ -68,14 +69,15 @@ word id 没生成对的话整词掩码会退化成逐字掩码,而且不报错�
 掩码率     固定 15%(动态 curriculum 的代码在,默认关)
 ```
 
-梯度累积爬升等价于 batch size warmup。它和 LR warmup 各算各的,所以训练日志里
-`accum` 和 `lr` 两列都要打出来。
+梯度累积爬升等价于 batch size warmup。它与 LR warmup 独立计算,训练日志因此
+同时打印 `accum` 和 `lr` 两列。
 
 **`finetune_mt.py` / `finetune_csc.py`** —— MT 是三个任务共享一个骨干:
 CWS(CRF)、POS(逐位置分类)、NER(CRF)。两处非显然:
 
-- POS loss 要加权 α=2,否则只占 1.6% 的梯度
-- 骨干 lr 2e-5、头 lr 5e-4。骨干已训好,大 lr 会冲坏;头是随机初始化的
+- POS loss 需加权 α=2,否则只占 1.6% 的梯度
+- 骨干 lr 2e-5、头 lr 5e-4。骨干已训好,大 lr 会破坏已有表示;头是随机初始化的,
+  需要较大 lr
 
 CSC 是双头(纠错 + 检测),纠错头必须与词嵌入绑权重,否则 F1 差 0.05。
 见 [`docs/WHY.md`](../docs/WHY.md#csc-的纠错头必须与词嵌入绑权重)。
@@ -86,9 +88,9 @@ CSC 是双头(纠错 + 检测),纠错头必须与词嵌入绑权重,否则 F1 �
 数据集全部自己实现,替掉的是 `torchcrf` / `optimi` / `transformers` /
 `safetensors` / `datasets`。
 
-**不碰文本。** 没有字符串处理,也不 import 任何 tokenizer。分词、字→id、
-标签构造全在 [`prepare/`](../prepare/),这里只读预编码好的 id 张量。所以
-PieceTokenizer 不是 `src/` 的依赖。
+**不处理文本。** 没有字符串处理,不 import 任何 tokenizer。分词、字→id、
+标签构造全在 [`prepare/`](../prepare/),这里只读预编码好的 id 张量,
+因此 PieceTokenizer 不是 `src/` 的依赖。
 
 ## 怎么跑
 
@@ -103,5 +105,5 @@ python -m src.finetune_csc --ckpt_dir ... --train_data ... --test_data ...
 直接 `python src/pretrain.py` 会因为相对 import 失败。完整参数由
 [`prepare/Makefile`](../prepare/Makefile) 拼好,平时用 `make -C prepare pretrain`。
 
-改成 package 是因为 `data` / `model` / `optim` 这几个名字太通用,平铺在
-`sys.path` 上会跟别的模块互相遮蔽。
+用 package 而非平铺目录,是因为 `data` / `model` / `optim` 这几个模块名过于
+通用,放在 `sys.path` 上会与其他模块互相遮蔽。
