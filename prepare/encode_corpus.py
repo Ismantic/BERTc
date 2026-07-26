@@ -22,9 +22,9 @@
   文档",不是全局文档号。
 
 用法:
-    python -m prepare.pretokenize --output prepare/corpus/train.pt \\
+    python -m prepare.encode_corpus --output prepare/corpus/train.pt \\
         --target_tokens 20_000_000_000 --num_workers 14
-    python -m prepare.pretokenize --output /tmp/smoke.pt \\
+    python -m prepare.encode_corpus --output /tmp/smoke.pt \\
         --target_tokens 2_000_000 --num_workers 4      # 冒烟
 """
 import argparse
@@ -296,7 +296,7 @@ def main() -> None:
         sys.exit(f"没有分词模型 {args.wapic_model} —— "
                  f"跑 bash prepare/install_deps.sh wapic")
 
-    print(f"=== pretokenize {time.strftime('%Y-%m-%d %H:%M:%S')} ===")
+    print(f"=== encode_corpus {time.strftime('%Y-%m-%d %H:%M:%S')} ===")
     print(f"目标 {args.target_tokens / 1e9:.1f}B token,"
           f"中英文档比 {args.zh_per_round}:{args.en_per_round}")
     print(f"输出 {out_path}")

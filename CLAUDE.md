@@ -87,7 +87,7 @@ python -m src.pretrain / src.finetune_mt / src.finetune_csc
 - **CSC 的 `correct()` 只用纠错头,不用检测头**。检测头是训练时的辅助信号,
   这与训出 0.8346 的口径一致,不要改成用 det 过滤。
 - **预训练语料不能逐字编码**。字模式下 tokenizer 只对中文一字一 token,
-  英文单词整体成一个 piece、空格成 `▁`。`prepare/pretokenize.py` 整串编码后
+  英文单词整体成一个 piece、空格成 `▁`。`prepare/encode_corpus.py` 整串编码后
   按字符游标把 piece 对回原文才能拿到词边界。
 - **`torch.from_file` 必须 `shared=True`**。`shared=False` 要私有副本,
   70GB 语料直接 `Cannot allocate memory`。

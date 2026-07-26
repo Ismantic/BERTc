@@ -17,7 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from prepare.pretokenize import default_wapic_model   # noqa: E402
+from prepare.encode_corpus import default_wapic_model   # noqa: E402
 
 SAMPLES = [
     "人民日报社论:坚持改革开放不动摇",

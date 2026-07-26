@@ -20,7 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE = ROOT / "test" / "fixtures" / "tokenizer_baseline.json"
 sys.path.insert(0, str(ROOT))
-from prepare.pretokenize import default_wapic_model   # noqa: E402
+from prepare.encode_corpus import default_wapic_model   # noqa: E402
 
 
 def check_piece(base: dict) -> int:
@@ -125,7 +125,7 @@ def main() -> int:
     failures += check_wapic(base["wapic"])
 
     if failures:
-        print(f"\n{failures} 项不一致 —— 不要在这个状态下重跑 pretokenize 或微调")
+        print(f"\n{failures} 项不一致 —— 不要在这个状态下重跑 encode_corpus 或微调")
         return 1
     print("\n校验通过")
     return 0

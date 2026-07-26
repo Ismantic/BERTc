@@ -36,7 +36,7 @@
 字模式下 tokenizer 只对**中文**一字一 token;英文单词整体成一个 piece,
 空格成 `▁`。所以不能一个字一个字地编码 —— 那样英文会被拆碎。
 
-`prepare/pretokenize.py` 的做法是整串编码,再按字符游标把 piece 对回原文位置,
+`prepare/encode_corpus.py` 的做法是整串编码,再按字符游标把 piece 对回原文位置,
 这样才能拿到词边界。MT / CSC 用的是纯中文短句,才可以逐字编。
 
 同一个 tokenizer,两种编码方式,用错了不会报错,只是英文部分变成噪声。

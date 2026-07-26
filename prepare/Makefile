@@ -105,7 +105,7 @@ corpus: $(CORPUS)
 # 约 4.6 小时、产出 180G(.pt 80G + .wid 80G + .seg 20G),所以做成文件目标 ——
 # 产物在就不重跑
 $(CORPUS):
-	cd $(ROOT) && $(PY) -m prepare.pretokenize --output $(CORPUS) \
+	cd $(ROOT) && $(PY) -m prepare.encode_corpus --output $(CORPUS) \
 	    --target_tokens $(TARGET_TOKENS) --num_workers $(WORKERS)
 
 # ---------------------------------------------------------------- 预训练

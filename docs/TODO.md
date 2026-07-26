@@ -42,24 +42,23 @@ token,于是 `撘`/`檡`/`暸` 在模型眼里**完全一样**(都是 `<0xE6>` =
 `prepare/tokenizer.py` 的 `id_to_char()` 是"一个 id 一个字"的表,遇到
 字节回退的字(三个 token)还原不回去 —— SIGHAN-15 的 707 条里有 15 条。
 
-现在的做法是**绕过**:`prepare/build_csc.py` 把原文一并写进测试集文件,
-评测拿原文当参照。够用,而且有个额外好处 —— 评测口径天然免疫任何编码问题,
-将来换 tokenizer 也不会漂。
+现在的做法是回避这个问题:`prepare/build_csc.py` 把原文一并写进测试集文件,
+评测用原文当参照。这样评测口径不受编码影响,将来换 tokenizer 也不会漂移。
 
 **正确做法**是用 tokenizer 的 `decode()` 重组字节序列。但只影响
 `save/assets/csc_model.py` 里发布出去的推理代码(它没有原文可依,只能靠
 反查表),优先级不高。
 
-### `prepare/pretokenize.py` 的命名
+### 165M 的微调没跑到底
 
-它做的是"编码 + 打包语料",而 `pre-tokenize` 在 NLP 里是既定术语,指子词
-切分**之前**的归一化与切分 —— PieceTokenizer 里就有一个真正的
-`PreTokenizer` 类。同一生态里两个名字指两件事。
+2026-07-26 的净室验证里跑通了起步:`make finetune-mt CKPT=models/BERTc-165M`
+参数拼装正确,200 步内 loss 正常下降(cws 98.9→11.1,pos 3.37→0.74,
+ner 180→10.1),但没跑完 5 个 epoch,没有最终指标。
 
-建议改名 `encode_corpus.py`(不叫 `tokenize.py`,会遮蔽标准库)。
-纯改名,无逻辑改动。
+已发布的 165M-MT / 165M-CSC 权重来自更早的训练,不是当前代码跑出来的。
+315M 的 MT / CSC 用当前代码复现过(1.4705 / 0.8316,记录 1.4712 / 0.8346)。
 
-### 165M 的微调没跑过
+**做什么**:`make -C prepare finetune SIZE=mid CKPT=models/BERTc-165M` 跑完,
+对照记录的 1.4689 / 0.8308。
 
-`prepare/Makefile` 已经支持 `SIZE=mid`,但只验证了参数拼装正确,没实跑。
-315M 的 MT / CSC 都复现过(1.4705 / 0.8274,记录 1.4712 / 0.8346)。
+**代价**:MT 约 1.5 小时 + CSC 约 2 小时。

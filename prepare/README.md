@@ -24,7 +24,7 @@ padding。
 词边界用 Wapic 切词、取 `word_starts` 得到,同一个词的字共享一个 word id。
 
 **语料不能逐字编码。** 字模式下 tokenizer 只对中文一字一 token,英文单词整体
-成一个 piece、空格成 `▁`,逐字编码会拆碎英文。`pretokenize.py` 整串编码后按
+成一个 piece、空格成 `▁`,逐字编码会拆碎英文。`encode_corpus.py` 整串编码后按
 字符游标把 piece 对回原文位置,以同时得到正确的 id 和词边界。MT / CSC 是纯
 中文短句,可以逐字编码。
 
@@ -76,7 +76,7 @@ labels.py         CWS / POS / NER 标签表,PD-1998 → LTP 的词性与实体�
 pack.py           扁平数组 + offsets 的打包格式
 build_mt.py       PD-1998 jsonl → mt_{train,dev}.pt
 build_csc.py      CSC 句对 → csc_{train,test}.pt
-pretokenize.py    预训练语料 → .pt / .wid / .seg
+encode_corpus.py    预训练语料 → .pt / .wid / .seg
 Makefile          全流程入口
 ```
 

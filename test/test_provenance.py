@@ -22,9 +22,9 @@ ROOT = Path(__file__).resolve().parents[1]
 # 标志串用来确认"生产者确实在写这个东西",而不是名字凑巧对上。
 DAG = [
     ("data/downloads/*",
-     "data/download.py", "def unpack_dep", "process*.py / pretokenize.py"),
+     "data/download.py", "def unpack_dep", "process*.py / encode_corpus.py"),
     ("data/derived/*.documents.txt",
-     "data/process.py", "documents.txt", "prepare/pretokenize.py"),
+     "data/process.py", "documents.txt", "prepare/encode_corpus.py"),
     ("data/derived/pd98/*.jsonl",
      "data/process_cws.py", "cws.pd98.jsonl", "prepare/build_mt.py"),
     ("data/derived/csc/sighan_wang271k_pairs.pkl",
@@ -36,7 +36,7 @@ DAG = [
     ("prepare/datasets/csc_{train,test}.pt",
      "prepare/build_csc.py", "save(", "src/finetune_csc.py"),
     ("prepare/corpus/v4.pt{,.wid,.seg}",
-     "prepare/pretokenize.py", "wid", "src/pretrain.py"),
+     "prepare/encode_corpus.py", "wid", "src/pretrain.py"),
     ("prepare/output/<名字>/checkpoint-*",
      "src/pretrain.py", "save_steps", "src/finetune_*.py"),
     ("save/releases/<名字>/",

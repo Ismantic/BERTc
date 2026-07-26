@@ -1,7 +1,7 @@
-"""把下载的原始数据加工成 pretokenize 能直接读的 documents.txt。
+"""把下载的原始数据加工成 encode_corpus 能直接读的 documents.txt。
 
 只有 PeopleDaily 和 CnnDailyMail 需要这一步 —— SkyPile / CCI3-HQ /
-FineWeb-Edu / finewiki 本来就是 parquet / jsonl,pretokenize_modern.py 直接读。
+FineWeb-Edu / finewiki 本来就是 parquet / jsonl,encode_corpus.py 直接读。
 
 documents.txt 格式:一行一篇,title 与 content 用空格连接,内部换行折叠成空格。
 逻辑移植自 Shiyu/Data 的 src/process.py + src/documents.py(原本是两段:
