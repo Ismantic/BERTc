@@ -52,6 +52,9 @@ git_clone_or_pull() {
 install_piece() {
     log "PieceTokenizer"
     git_clone_or_pull "$PIECE_URL" "$PIECE_REPO"
+    # --no-build-isolation 要求构建后端在目标 venv 里就位。全新的 uv venv 不带
+    # setuptools,不先装的话这一步直接失败(净室实测)。
+    uv pip install -q setuptools --python "$PY"
     # editable 安装:.so 编译到仓库根目录,venv 通过 .pth 指过去。
     # 这样 prepare/tokenizer.py 能顺着 piece_tokenizer.__file__ 找到同仓库的
     # save/BERTc-Tokenizer.pt —— 词表只有一个来源,不会两边漂移。
@@ -73,6 +76,9 @@ install_wapic() {
     if [[ -f "$model" ]]; then
         echo "  已存在:$model ($(du -h "$model" | cut -f1))"
     else
+        # Wapic 的 download.py 要 huggingface_hub。全新 venv 里没有,
+        # 而这一步在 requirements.txt 之前跑,所以自己保证前置就位(净室实测)。
+        uv pip install -q huggingface_hub --python "$PY"
         # hf-mirror 走不通代理,必须清掉 —— Wapic 的 download.py 自己不清
         (cd "$WAPIC_REPO" \
             && env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY \
