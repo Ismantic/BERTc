@@ -1,6 +1,6 @@
 # BERTc
 
-中文 Modern BERT,由零预训练,纯 PyTorch 实现。
+中文 Modern BERT ，由零预训练，纯 PyTorch 实现。
 
 包含从下载语料到发布上 Hugging Face 的完整流程:数据获取与加工、词表与预编码、
 预训练、微调、导出发布。模型与训练代码(`src/`)只依赖 torch —— CRF、优化器、
@@ -26,9 +26,9 @@ BERTcForCSC.from_pretrained(".").correct("他平时喜欢锻练身体")
 
 | Hugging Face | 参数 | 任务 |
 |---|---|---|
-| [`Ismantic/BERTc-315M`](https://huggingface.co/Ismantic/BERTc-315M) · [`-165M`](https://huggingface.co/Ismantic/BERTc-165M) | 315M / 165M | 骨干,可继续微调 |
-| [`Ismantic/BERTc-315M-MT`](https://huggingface.co/Ismantic/BERTc-315M-MT) · [`-165M-MT`](https://huggingface.co/Ismantic/BERTc-165M-MT) | — | 分词 + 词性 + 实体 |
-| [`Ismantic/BERTc-315M-CSC`](https://huggingface.co/Ismantic/BERTc-315M-CSC) · [`-165M-CSC`](https://huggingface.co/Ismantic/BERTc-165M-CSC) | — | 错别字识别 |
+| [`Ismantic/BERTc-315M`](https://huggingface.co/Ismantic/BERTc-315M) · [`-165M`](https://huggingface.co/Ismantic/BERTc-165M) | 315M / 165M | Backbone,可继续微调 |
+| [`Ismantic/BERTc-315M-MT`](https://huggingface.co/Ismantic/BERTc-315M-MT) · [`-165M-MT`](https://huggingface.co/Ismantic/BERTc-165M-MT) | — | CWS + POS + NER |
+| [`Ismantic/BERTc-315M-CSC`](https://huggingface.co/Ismantic/BERTc-315M-CSC) · [`-165M-CSC`](https://huggingface.co/Ismantic/BERTc-165M-CSC) | — | Correction |
 
 ```bash
 huggingface-cli download Ismantic/BERTc-315M-MT --local-dir BERTc-MT
@@ -40,25 +40,25 @@ cd BERTc-MT && python example_decode.py
 仓库里另有两个交互式脚本:
 
 ```bash
-python -m save.cws        # 分词 + 词性 + 实体
-python -m save.csc        # 错别字识别
+python -m save.cws        # CWS + POS + NER
+python -m save.csc        # Correction
 ```
 
 ## 表现
 
-分词 + 词性 + 实体(PD-1998,FGM 5 epoch):
+CWS + POS + NER (PD-1998,FGM 5 epoch):
 
-| 模型 | 参数 | 分词 | 词性 | 实体 | joint |
+| 模型 | 参数 | CWS | POS | NER | joint |
 |---|---|---|---|---|---|
 | **BERTc-315M + FGM** | 315M | 0.9840 | **0.9800** | 0.9660 | **1.4712** |
 | BERTc-165M + FGM | 165M | 0.9836 | 0.9753 | 0.9632 | 1.4689 |
 | MacBERT-Large | 326M | **0.9856** | 0.9629 | **0.9664** | 1.4677 |
 | RoBERTa-wwm-ext | 102M | 0.9828 | 0.9562 | 0.9629 | 1.4623 |
 
-joint = 分词 F1 + 0.3 × 词性准确率 + 0.2 × 实体 F1。指标在 dev 前 2000 句上测
+joint = CWS F1 + 0.3 × POS 准确率 + 0.2 × NER F1。指标在 dev 前 2000 句上测
 (与训练时选 best.pt 的口径一致);全量 21,143 句上是 1.4646。
 
-错别字识别 (SIGHAN-15 官方 707 条,pycorrector 口径):
+Correction (SIGHAN-15 官方 707 条，PyCorrector 口径):
 
 | 模型 | 参数 | F1 | P | R |
 |---|---|---|---|---|
