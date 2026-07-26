@@ -44,7 +44,7 @@ FINETUNES = {
         "recipe": "5 epoch,batch 64,骨干 lr 2e-5 / 头 lr 5e-4,warmup 0.1,"
                   "α_pos 2.0,β_ner 0.5,FGM ε 1.0",
         "data": "PD-1998(人民日报 1998 年 1-6 月 PFR 标注),"
-                "train 102,739 句 / dev 21,143 句",
+                "train 102,739 句(199801-199805)/ dev 21,143 句(199806)",
     },
     "BERTc-165M-MT": {
         "task": "mt",
@@ -65,7 +65,7 @@ FINETUNES = {
                     "精确率": "0.9396", "召回率": "0.7507"},
         "recipe": "10 epoch,batch 32,lr 3e-5,warmup 0.1,"
                   "det_weight 0.3,纠错阈值 0.7,max_len 128",
-        "data": "SIGHAN + Wang271K + MCSCSet + CSCD-NS 等,去重后 826,097 对",
+        "data": "SIGHAN 13/14/15 的 train + Wang271K,去重后 249,975 对",
     },
     "BERTc-165M-CSC": {
         "task": "csc",

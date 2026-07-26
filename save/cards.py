@@ -14,7 +14,7 @@ library_name: pytorch
 _TOKENIZER_SECTION = """
 ## Tokenizer
 
-字级 SentencePiece,词表 12536(pad=12531,mask=12535)。**必须用 `dict="no"`
+字级 SentencePiece,`BERTc-Tokenizer.pt`,词表 12536(pad=12531,mask=12535)。**必须用 `dict="no"`
 加载**(字模式,不挂分词词典)——挂了词典编码结果会跟训练时不一致,而且不报错。
 
 ```bash
@@ -45,7 +45,7 @@ def backbone_card(name: str, spec: dict) -> str:
         "| `model.safetensors` | 权重 |",
         "| `config.json` | 架构配置 |",
         "| `model.py` | 模型定义(纯 PyTorch,无 transformers 依赖)|",
-        "| `piece.model` / `mask_token_id.txt` | tokenizer |",
+        "| `BERTc-Tokenizer.pt` | 词表(与 PieceTokenizer 仓库里那份相同)|",
         "| `tokenizer.py` | 字级 tokenizer 封装 |",
         "| `example_load.py` | 加载 + 掩码预测示例 |",
     ])
@@ -126,11 +126,23 @@ print(model.predict("中国科学院计算技术研究所在北京"))
             "| `example_decode.py` | 示例 |",
         ])
         extra = """
+## 评测口径
+
+指标在 **dev 集前 2000 句**上测 —— 与训练时选 best.pt 的口径一致
+(训练脚本 `--dev_limit 2000`)。全量 21,143 句上是
+分词 0.9790 / 词性 0.9787 / 实体 0.9597 / joint 1.4646。
+
+joint score = 分词 F1 + 0.3 × 词性准确率 + 0.2 × 实体 F1。
+
 ## 标签体系
 
 - 分词:BIES
 - 词性:LTP base1 的 27 个标签(PD-1998 的 43 个映射过来)
 - 实体:BIES × {人名 Nh / 地名 Ns / 机构 Ni},PD 的 MISC 丢弃
+
+词性代号可读性差(`ns` 地名 / `ni` 机构名 / `nh` 人名 / `nd` 方位词 /
+`nl` 处所词 / `wp` 标点),BERTc 仓库的 `save/cws.py` 有个把它们翻成中文的
+交互式脚本。
 """
     else:
         title = "中文拼写纠错"
@@ -141,7 +153,8 @@ print(model.predict("中国科学院计算技术研究所在北京"))
 from csc_model import BERTcForCSC
 
 model = BERTcForCSC.from_pretrained(".")
-print(model.correct("我今天很稿兴"))     # 我今天很高兴
+print(model.correct("他平时喜欢锻练身体"))   # 他平时喜欢锻炼身体
+print(model.correct(["句子一", "句子二"]))   # 也接列表
 ```"""
         files = "\n".join([
             "| `model.safetensors` | 骨干 + 双头 |",
@@ -151,10 +164,27 @@ print(model.correct("我今天很稿兴"))     # 我今天很高兴
             "| `example_correct.py` | 示例 |",
         ])
         extra = """
+## 评测口径
+
+指标在 **SIGHAN-15 官方 707 条**上测(`shibing624/pycorrector` 里
+`pycorrector/data/sighan2015_test.tsv` 那一版)。注意 CTCDataset 里还有个
+1100 条的 `sighan15_test.jsonl`,不是同一个东西。
+
+判定是**整句**级:整句完全一致才算对,改对一半不给分。
+
 ## 阈值
 
 `correct(..., threshold=0.7)`:纠错置信度低于阈值就保留原字。调低提召回、
 调高提精确率。0.7 是与 MacBERT4CSC 对齐的默认值,报告的指标都基于它。
+
+## 一个反直觉的行为
+
+`correct()` **只用纠错头,不用检测头**。检测头是训练时的辅助信号,推理不参与。
+
+所以会出现"模型知道这里有错、但选不出正确的字"的情况。比如「我今天很稿兴」,
+`稿` 位置的检测分是 0.98,但纠错头的 top-1 仍是 `稿` 本身(0.22),
+`高` 只排第 4(0.11)—— 这种时候**调低阈值没有任何用**,阈值只能否决改动,
+不能凭空造出改动。
 """
 
     return f"""{header}

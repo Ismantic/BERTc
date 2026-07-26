@@ -106,8 +106,8 @@ class PieceTokenizer:
                     self.char_to_id(c)
         return len(self._cache)
 
-    def copy_to(self, output_dir, name: str = "piece.model") -> Path:
-        """把词表拷到发布目录。发布包里沿用 piece.model 这个名字。"""
+    def copy_to(self, output_dir, name: str = PIECE_MODEL_NAME) -> Path:
+        """把词表拷到发布目录。沿用 PieceTokenizer 仓库里的文件名,来源一目了然。"""
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
         dst = output_dir / name

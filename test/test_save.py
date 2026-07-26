@@ -97,7 +97,7 @@ def test_backbone(name: str) -> int:
         print(f"  {name} 未导出,跳过")
         return 0
     fails = check_files(name, ["model.safetensors", "config.json", "model.py",
-                               "tokenizer.py", "piece.model", "README.md",
+                               "tokenizer.py", "BERTc-Tokenizer.pt", "README.md",
                                "example_load.py"])
     code, out = run_in(folder, """
         import json, torch

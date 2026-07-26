@@ -33,6 +33,12 @@ ASSETS = Path(__file__).resolve().parent / "assets"
 DEFAULT_OUT = Path(__file__).resolve().parent / "releases"
 
 
+def _clean(out: Path) -> None:
+    """清掉 import 发布目录时产生的 __pycache__(测试跑过就会有)。"""
+    for d in out.rglob("__pycache__"):
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def _copy(src: Path, dst_dir: Path) -> None:
     if not src.exists():
         sys.exit(f"缺少 {src}")
@@ -43,13 +49,13 @@ def _common_assets(out: Path, backbone_dir: Path, extra_code=()) -> None:
     """所有发布目录都要带的东西:骨干定义、tokenizer、config。"""
     _copy(SRC / "model.py", out)
     _copy(ASSETS / "tokenizer.py", out)
-    # 词表来自 PieceTokenizer 仓库,本仓库不留副本;发布包里沿用 piece.model 这个名字
+    # 词表来自 PieceTokenizer 仓库,本仓库不留副本。发布包里沿用同一个文件名,
+    # 来源一目了然。mask_token_id 不单独存文件 —— 它等于词表大小,
+    # config.json 里也有,存三份只会漂移。
     sys.path.insert(0, str(ROOT))
-    from prepare.tokenizer import load_tokenizer
-    load_tokenizer().copy_to(out)
+    from prepare.tokenizer import load_tokenizer, PIECE_MODEL_NAME
+    load_tokenizer().copy_to(out, PIECE_MODEL_NAME)
     _copy(backbone_dir / "config.json", out)
-    (out / "mask_token_id.txt").write_text(
-        str(json.loads((backbone_dir / "config.json").read_text())["mask_token_id"]))
     for name in extra_code:
         src = (SRC if (SRC / name).exists() else ASSETS) / name
         _copy(src, out)
@@ -68,6 +74,7 @@ def export_backbone(name: str, spec: dict, out_root: Path) -> Path:
 
     _common_assets(out, ckpt_dir, extra_code=["example_load.py"])
     (out / "README.md").write_text(cards.backbone_card(name, spec), encoding="utf-8")
+    _clean(out)
     (out / "release_metadata.json").write_text(json.dumps({
         "name": name,
         "source_checkpoint": str(ckpt_dir.relative_to(ROOT)),
@@ -96,6 +103,7 @@ def export_finetune(name: str, spec: dict, out_root: Path) -> Path:
                  else ["csc_model.py", "example_correct.py"])
     _common_assets(out, backbone_dir, extra_code=task_code)
     (out / "README.md").write_text(cards.finetune_card(name, spec), encoding="utf-8")
+    _clean(out)
     (out / f"{spec['task']}_config.json").write_text(json.dumps({
         "task": spec["task"], "base_model": f"Ismantic/{spec['base']}",
         "metrics": spec["metrics"], "recipe": spec["recipe"], "data": spec["data"],
@@ -114,6 +122,11 @@ def refresh_code(name: str, spec: dict, out_root: Path) -> Path:
 
     _copy(SRC / "model.py", out)
     _copy(ASSETS / "tokenizer.py", out)
+    # 词表也刷新:文件名改过(piece.model → BERTc-Tokenizer.pt),旧包里没有
+    sys.path.insert(0, str(ROOT))
+    from prepare.tokenizer import load_tokenizer, PIECE_MODEL_NAME
+    if not (out / PIECE_MODEL_NAME).exists():
+        load_tokenizer().copy_to(out, PIECE_MODEL_NAME)
     if name in BACKBONES:
         _copy(ASSETS / "example_load.py", out)
         (out / "README.md").write_text(cards.backbone_card(name, spec),
@@ -126,6 +139,7 @@ def refresh_code(name: str, spec: dict, out_root: Path) -> Path:
             _copy(SRC / "crf.py", out)
         (out / "README.md").write_text(cards.finetune_card(name, spec),
                                        encoding="utf-8")
+    _clean(out)
     return out
 
 

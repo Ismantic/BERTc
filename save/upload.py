@@ -18,10 +18,12 @@ from pathlib import Path
 from .releases import ALL
 
 DEFAULT_DIR = Path(__file__).resolve().parent / "releases"
-IGNORE = ["**/__pycache__/**", "**/*.pyc"]
+# 注意要同时写 "__pycache__/**" —— "**/__pycache__/**" 匹配不到**顶层**的
+# __pycache__/,之前就因为这个把 .pyc 传上去了
+IGNORE = ["__pycache__/**", "**/__pycache__/**", "**/*.pyc"]
 # --code-only 时跳过的大文件。config.json / mask_token_id.txt 是配置不是权重,
 # 很小而且改架构描述时需要跟着更新,所以照传。
-WEIGHTS = ["model.safetensors", "piece.model"]
+WEIGHTS = ["model.safetensors", "BERTc-Tokenizer.pt"]
 
 
 def main() -> None:

@@ -3,6 +3,9 @@
 这份代码会**随模型一起发到 HF**,所以只能依赖 piece_tokenizer 本身,
 不能 import 仓库里的任何东西。
 
+词表文件 BERTc-Tokenizer.pt 与 PieceTokenizer 仓库 save/ 下的那份逐字节相同 ——
+同名是为了让来源一目了然。
+
 装 tokenizer:
     pip install git+https://github.com/Ismantic/PieceTokenizer
 """
@@ -18,16 +21,17 @@ class PieceCharTokenizer:
     训练时不一致,而且不会报错。
     """
 
+    MODEL_NAME = "BERTc-Tokenizer.pt"
+
     def __init__(self, model_dir="."):
         model_dir = Path(model_dir)
         self._tok = _pt.Tokenizer()
-        self._tok.load(str(model_dir / "piece.model"), dict="no")
+        self._tok.load(str(model_dir / self.MODEL_NAME), dict="no")
 
         self.pad_token_id = self._tok.piece_to_id("<pad>")
         self.unk_token_id = 0
-        mask_path = model_dir / "mask_token_id.txt"
-        self.mask_token_id = (int(mask_path.read_text().strip())
-                              if mask_path.exists() else self._tok.vocab_size())
+        # [MASK] 追加在 piece 词表之后,id 就等于词表大小 —— 不需要单独存一个文件
+        self.mask_token_id = self._tok.vocab_size()
         self.vocab_size = self._tok.vocab_size() + 1
         self._cache = {}
 
