@@ -3,7 +3,8 @@
 从 Hugging Face 上的骨干开始,在自己的任务上微调。**不需要预训练** —— 那要
 单张 4090 跑 3 到 5 天,而微调只要几小时。
 
-全程只依赖 Hugging Face 和 GitHub。
+全程只依赖 Hugging Face 和 GitHub。想从零预训练见
+[`PRETRAIN.md`](PRETRAIN.md)。
 
 - [装依赖](#装依赖)
 - [拿骨干](#拿骨干)

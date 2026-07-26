@@ -122,7 +122,8 @@ make -C prepare corpus
 make -C prepare pretrain SIZE=large
 ```
 
-细节见各层的 README 和 [`docs/FINETUNE.md`](docs/FINETUNE.md)。
+两篇教程:[`docs/FINETUNE.md`](docs/FINETUNE.md)(从 HF 骨干微调,几小时)、
+[`docs/PRETRAIN.md`](docs/PRETRAIN.md)(从零预训练,2-4 天)。
 
 ## 环境
 
