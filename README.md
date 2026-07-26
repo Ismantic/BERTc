@@ -28,7 +28,7 @@ BERTcForCSC.from_pretrained(".").correct("他平时喜欢锻练身体")
 |---|---|---|
 | [`Ismantic/BERTc-315M`](https://huggingface.co/Ismantic/BERTc-315M) · [`-165M`](https://huggingface.co/Ismantic/BERTc-165M) | 315M / 165M | 骨干,可继续微调 |
 | [`Ismantic/BERTc-315M-MT`](https://huggingface.co/Ismantic/BERTc-315M-MT) · [`-165M-MT`](https://huggingface.co/Ismantic/BERTc-165M-MT) | — | 分词 + 词性 + 实体 |
-| [`Ismantic/BERTc-315M-CSC`](https://huggingface.co/Ismantic/BERTc-315M-CSC) · [`-165M-CSC`](https://huggingface.co/Ismantic/BERTc-165M-CSC) | — | 拼写纠错 |
+| [`Ismantic/BERTc-315M-CSC`](https://huggingface.co/Ismantic/BERTc-315M-CSC) · [`-165M-CSC`](https://huggingface.co/Ismantic/BERTc-165M-CSC) | — | 错别字识别 |
 
 ```bash
 huggingface-cli download Ismantic/BERTc-315M-MT --local-dir BERTc-MT
@@ -41,7 +41,7 @@ cd BERTc-MT && python example_decode.py
 
 ```bash
 python -m save.cws        # 分词 + 词性 + 实体
-python -m save.csc        # 拼写纠错
+python -m save.csc        # 错别字识别
 ```
 
 ## 表现
@@ -52,19 +52,19 @@ python -m save.csc        # 拼写纠错
 |---|---|---|---|---|---|
 | **BERTc-315M + FGM** | 315M | 0.9840 | **0.9800** | 0.9660 | **1.4712** |
 | BERTc-165M + FGM | 165M | 0.9836 | 0.9753 | 0.9632 | 1.4689 |
-| MacBERT-large | 326M | **0.9856** | 0.9629 | **0.9664** | 1.4677 |
+| MacBERT-Large | 326M | **0.9856** | 0.9629 | **0.9664** | 1.4677 |
 | RoBERTa-wwm-ext | 102M | 0.9828 | 0.9562 | 0.9629 | 1.4623 |
 
 joint = 分词 F1 + 0.3 × 词性准确率 + 0.2 × 实体 F1。指标在 dev 前 2000 句上测
 (与训练时选 best.pt 的口径一致);全量 21,143 句上是 1.4646。
 
-拼写纠错(SIGHAN-15 官方 707 条,pycorrector 口径):
+错别字识别 (SIGHAN-15 官方 707 条,pycorrector 口径):
 
 | 模型 | 参数 | F1 | P | R |
 |---|---|---|---|---|
 | **BERTc-315M** | 315M | **0.8346** | 0.9396 | 0.7507 |
 | MacBERT4CSC | 110M | 0.8314 | 0.9274 | 0.7534 |
-| MacBERT-large | 326M | 0.8309 | 0.9302 | 0.7507 |
+| MacBERT-Large | 326M | 0.8309 | 0.9302 | 0.7507 |
 | BERTc-165M | 165M | 0.8308 | 0.9516 | 0.7373 |
 
 消融见 [`save/sota/README.md`](save/sota/README.md)。
@@ -84,7 +84,7 @@ joint = 分词 F1 + 0.3 × 词性准确率 + 0.2 × 实体 F1。指标在 dev �
 
 每条选择的理由见 [`docs/WHY.md`](docs/WHY.md)。
 
-## 仓库结构
+## 代码
 
 四层,按数据流切:
 
@@ -105,7 +105,7 @@ save/       导出 HF 发布包、上传、交互式脚本
 每层一个 README 说明这层在做什么。另有 `deps/`(clone 的 C++ 依赖)、
 `docs/`、`test/`。
 
-## 自己训
+## 训练
 
 语料、标注数据、词表、C++ 依赖全部从 Hugging Face 和 GitHub 获取,
 不需要任何本地既有文件。
@@ -123,21 +123,6 @@ make -C prepare status      # 每一步产物在不在
 
 建议先跑微调 —— 几小时就有反馈,而且能验证整条链路(数据、词表、模型、评测)
 是通的。
-
-### 复现情况
-
-| | 记录 | 复现 | |
-|---|---|---|---|
-| 评测(用已发布 checkpoint) | MT 1.4712 / CSC 0.8346 | 一位不差 | ✓ |
-| MT 重新训练 | 1.4712 | 1.4705 | −0.0007 |
-| CSC 重新训练 | 0.8346 | 0.8316 | −0.0030 |
-
-`python test/test_reproduce_sota.py` 跑第一行。后两行是重训,差距小于训练自身的
-波动(CSC 单轮实测波动可达 ±0.02)。
-
-预训练逐位复现做不到 —— Wapic 的分词在 2026-07 变过,词边界与当初不同
-(PD-1998 dev 上 26.1% 的句子至少有一处差异)。词表、架构、配方都没变,能复现
-的是同等水平的模型,不是同一个模型。
 
 ## 文档
 
