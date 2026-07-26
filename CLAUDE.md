@@ -99,6 +99,7 @@ python -m src.pretrain / src.finetune_mt / src.finetune_csc
 ```bash
 python test/test_reproduce_sota.py   # 拿真 checkpoint 复现 MT 1.4712 / CSC 0.8346
 python test/test_save.py             # 发布目录能否独立跑
+python test/test_provenance.py       # 每个中间产物都有生产者(秒级,无依赖)
 python test/test_tokenizer.py        # C++ 依赖重建后行为有没有变
 python test/test_crf.py              # vs torchcrf(软依赖,没装就跳过)
 python test/test_optim.py            # vs optimi + transformers

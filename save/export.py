@@ -64,7 +64,12 @@ def _common_assets(out: Path, backbone_dir: Path, extra_code=()) -> None:
 def export_backbone(name: str, spec: dict, out_root: Path) -> Path:
     ckpt_dir = Path(spec["checkpoint"])
     if not (ckpt_dir / "model.pt").exists():
-        sys.exit(f"{name}: 没有 {ckpt_dir / 'model.pt'}")
+        sys.exit(f"{name}: 没有 {ckpt_dir / 'model.pt'}\n"
+                 f"  骨干是预训练产物:make -C prepare pretrain SIZE=large\n"
+                 f"    → prepare/output/{name}/checkpoint-8500,拷到 models/{name}\n"
+                 f"  或者拿已发布的那份:\n"
+                 f"    huggingface-cli download Ismantic/{name} "
+                 f"--local-dir models/{name}")
     out = out_root / name
     out.mkdir(parents=True, exist_ok=True)
 
@@ -88,7 +93,12 @@ def export_finetune(name: str, spec: dict, out_root: Path) -> Path:
     ckpt_path = Path(spec["checkpoint"])
     backbone_dir = Path(spec["backbone"])
     if not ckpt_path.exists():
-        sys.exit(f"{name}: 没有 {ckpt_path}")
+        sys.exit(f"{name}: 没有 {ckpt_path}\n"
+                 f"  微调 checkpoint 是训练产物:make -C prepare finetune\n"
+                 f"  已发布的同一份权重也在 HF 上:\n"
+                 f"    huggingface-cli download Ismantic/{name} "
+                 f"--local-dir save/releases/{name}\n"
+                 f"  —— 但拿到发布包就不必再 export 了,直接用")
     out = out_root / name
     out.mkdir(parents=True, exist_ok=True)
 
@@ -173,8 +183,15 @@ def main() -> None:
             print(f"  ✓ {name:<18} 刷新 {n_code} 个代码/文档文件,权重未动")
             continue
         if not Path(spec["checkpoint"]).exists():
-            print(f"  跳过 {name}:{spec['checkpoint']} 不存在"
-                  f"(只改代码的话用 --code-only)")
+            how = (f"make -C prepare pretrain SIZE="
+                   f"{'large' if '315M' in name else 'mid'},产物拷到 models/{name}"
+                   if name in BACKBONES else
+                   "make -C prepare finetune")
+            print(f"  跳过 {name}:{spec['checkpoint']} 不存在\n"
+                  f"      自己训:{how}\n"
+                  f"      或下已发布的:huggingface-cli download Ismantic/{name} "
+                  f"--local-dir {'models' if name in BACKBONES else 'save/releases'}/{name}\n"
+                  f"      只改代码不动权重:--code-only")
             continue
         out = (export_backbone(name, spec, args.out) if name in BACKBONES
                else export_finetune(name, spec, args.out))

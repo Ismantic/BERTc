@@ -20,19 +20,73 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from src import data as bertc_data                               # noqa: E402
+from src.checkpoint import load_safetensors                      # noqa: E402
 from src.evaluate import evaluate_csc, evaluate_mt               # noqa: E402
 from src.finetune_csc import ModernBertCSC                       # noqa: E402
 from src.finetune_mt import ModernBertMT                         # noqa: E402
 
 DATASETS = ROOT / "prepare" / "datasets"
 SOTA = ROOT / "save" / "sota"
-BACKBONE_LARGE = ROOT / "prepare" / "backbones" / "BERTc-315M"
 
 # save/sota/README.md 记录的数
 EXPECT_MT = {"cws_f1": 0.9840, "pos_acc": 0.9800, "ner_f1": 0.9660, "score": 1.4712}
 EXPECT_CSC_F1 = 0.8346
 TOL = 0.005          # 允许的偏差
 DEV_LIMIT = 2000     # 原训练脚本 --eval_dev_limit 的默认值
+
+
+def resolve_backbone(name: str = "BERTc-315M") -> Path | None:
+    """找一个能提供架构 config 的骨干目录。
+
+    权重随后会被微调 checkpoint 整个覆盖,所以这里要的只是 config.json 加一份
+    能让 load_state_dict 走通的初始权重。三个来源任取其一 —— 全新 clone 上
+    最省事的是从 HF 下发布包。
+    """
+    for p in (ROOT / "save" / "releases" / name,
+              ROOT / "models" / name,
+              ROOT / "prepare" / "output" / name / "checkpoint-8500"):
+        if (p / "config.json").exists():
+            return p
+    return None
+
+
+def resolve_finetuned(sota_name: str, release_name: str) -> Path | None:
+    """微调 checkpoint:优先本地训练产物,退回已发布的 safetensors。
+
+    两者权重相同 —— 发布包就是从 save/sota/*.pt 导出的,唯一的差别是
+    CSC 的 cor_head.weight 与词嵌入绑权重、导出时去了重,加载时会自动绑回。
+    """
+    pt = SOTA / sota_name
+    if pt.exists():
+        return pt
+    st = ROOT / "save" / "releases" / release_name / "model.safetensors"
+    return st if st.exists() else None
+
+
+def load_finetuned(path: Path) -> dict:
+    if path.suffix == ".safetensors":
+        return load_safetensors(path)
+    state = torch.load(path, map_location="cpu", weights_only=False)
+    return state.get("model", state) if isinstance(state, dict) else state
+
+
+def missing_inputs(what: str, backbone: Path | None, ckpt: Path | None,
+                   data: Path) -> bool:
+    """缺东西时说清楚缺哪个、怎么补,而不是让它在半路报 config.json 不存在。"""
+    lack = []
+    if backbone is None:
+        lack.append("骨干(要 config.json):"
+                    "huggingface-cli download Ismantic/BERTc-315M "
+                    "--local-dir models/BERTc-315M")
+    if ckpt is None:
+        lack.append(f"{what} checkpoint:"
+                    f"huggingface-cli download Ismantic/BERTc-315M-{what.upper()} "
+                    f"--local-dir save/releases/BERTc-315M-{what.upper()}")
+    if not data.exists():
+        lack.append(f"数据集 {data.name}:make -C data all && make -C prepare datasets")
+    for line in lack:
+        print(f"  缺 {line}")
+    return bool(lack)
 
 
 def report(name: str, got: float, want: float) -> bool:
@@ -44,10 +98,10 @@ def report(name: str, got: float, want: float) -> bool:
 
 
 def test_mt(device: str) -> int:
-    ckpt = SOTA / "sota_mt_v4large_fgm_5ep_best.pt"
     dev_path = DATASETS / "mt_dev.pt"
-    if not ckpt.exists() or not dev_path.exists():
-        print("  checkpoint 或 dev 数据集缺失,跳过")
+    backbone = resolve_backbone()
+    ckpt = resolve_finetuned("sota_mt_v4large_fgm_5ep_best.pt", "BERTc-315M-MT")
+    if missing_inputs("mt", backbone, ckpt, dev_path):
         return 0
 
     # 原训练脚本的 --eval_dev_limit 默认 2000:记录的数字是在 dev 前 2000 句上
@@ -60,14 +114,13 @@ def test_mt(device: str) -> int:
     collator = bertc_data.MTCollator(ds.pad_token_id)
     print(f"  dev 全量 {len(full):,} 句,按原口径取前 {len(ds):,} 句")
 
-    model = ModernBertMT(BACKBONE_LARGE, ds.num_cws_tags, ds.num_pos_tags,
+    model = ModernBertMT(backbone, ds.num_cws_tags, ds.num_pos_tags,
                          ds.num_ner_tags).to(device)
-    state = torch.load(ckpt, map_location="cpu", weights_only=False)
-    missing, unexpected = model.load_state_dict(state, strict=True)
+    missing, unexpected = model.load_state_dict(load_finetuned(ckpt), strict=True)
     if missing or unexpected:
         print(f"  ✗ 权重不匹配:缺 {missing},多 {unexpected}")
         return 1
-    print(f"  加载 {ckpt.name} 成功(严格模式)")
+    print(f"  骨干 {backbone.name} + 权重 {ckpt.name}(严格模式)")
 
     t0 = time.time()
     m = evaluate_mt(model, ds, collator, device)
@@ -80,10 +133,10 @@ def test_mt(device: str) -> int:
 
 
 def test_csc(device: str) -> int:
-    ckpt = SOTA / "sota_csc_v4large_v8_best.pt"
     test_path = DATASETS / "csc_test.pt"
-    if not ckpt.exists() or not test_path.exists():
-        print("  checkpoint 或测试集缺失,跳过")
+    backbone = resolve_backbone()
+    ckpt = resolve_finetuned("sota_csc_v4large_v8_best.pt", "BERTc-315M-CSC")
+    if missing_inputs("csc", backbone, ckpt, test_path):
         return 0
 
     blob = torch.load(test_path, map_location="cpu", weights_only=False)
@@ -92,14 +145,15 @@ def test_csc(device: str) -> int:
     collator = bertc_data.CSCCollator(ds.pad_token_id)
     print(f"  测试 {len(ds):,} 条,反查表 {len(id_to_char):,} 个字")
 
-    model = ModernBertCSC(BACKBONE_LARGE, blob["vocab_size"]).to(device)
-    state = torch.load(ckpt, map_location="cpu", weights_only=False)
-    state = state.get("model", state)
-    missing, unexpected = model.load_state_dict(state, strict=False)
+    model = ModernBertCSC(backbone, blob["vocab_size"]).to(device)
+    # cor_head.weight 与 bert.embed.weight 绑权重,发布包里去了重 —— 加载
+    # bert.embed.weight 就等于同时设好了它,所以这一个 key 缺失是预期的。
+    missing, unexpected = model.load_state_dict(load_finetuned(ckpt), strict=False)
+    missing = [k for k in missing if k != "cor_head.weight"]
     if missing or unexpected:
         print(f"  ✗ 权重不匹配:缺 {missing},多 {unexpected}")
         return 1
-    print(f"  加载 {ckpt.name} 成功")
+    print(f"  骨干 {backbone.name} + 权重 {ckpt.name}")
 
     t0 = time.time()
     m = evaluate_csc(model, ds, collator, device, id_to_char, threshold=0.7,

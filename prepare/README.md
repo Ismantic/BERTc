@@ -63,6 +63,9 @@ make -C prepare deps
 重建这两个依赖**之前**先跑 `python test/capture_baseline.py` 抓基线 ——
 顺序反了,记录的就已经是改过之后的行为。
 
+改了数据流之后跑 `python test/test_provenance.py`:它逐条核对每个中间产物
+都有代码负责生成,不允许出现只能靠手工放上去的文件。
+
 ## 文件
 
 ```

@@ -1,6 +1,6 @@
 """发布清单:每个 HF 仓库对应哪个 checkpoint、什么指标、模型卡怎么写。
 
-数字改了要同步 finetune/sota/README.md —— 那份是 SOTA 的源头,这里只是抄过去
+数字改了要同步 save/sota/README.md —— 那份是 SOTA 的源头,这里只是抄过去
 写进模型卡。
 """
 from pathlib import Path

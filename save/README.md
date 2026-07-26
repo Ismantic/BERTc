@@ -20,6 +20,26 @@ python -m save.upload --namespace Ismantic --dry-run  # 先看要传什么
 Backbone 和微调分开发。两个任务的头、评测口径、推理入口都不一样,塞进一个
 仓库下载的人会分不清该用哪个。
 
+## 权重从哪来
+
+`save/` 消费两类权重,都不在 git 里:
+
+| | 位置 | 生产者 | 拿现成的 |
+|---|---|---|---|
+| 骨干 | `models/<名字>/` | `make -C prepare pretrain` 的产物拷过来 | `huggingface-cli download Ismantic/BERTc-315M --local-dir models/BERTc-315M` |
+| 微调 | `save/sota/*.pt` | `make -C prepare finetune` | 见下 |
+
+`save/sota/*.pt` 是训练产物,重训能到同等水平但不逐位相同。要的是**已发布的
+那一份**权重的话,直接从 HF 下发布包 —— 它和 `.pt` 里的张量逐个相同,唯一
+的差别是 CSC 的 `cor_head.weight` 与词嵌入绑权重、导出时去了重。
+
+`test/test_reproduce_sota.py` 认这两种来源:先找 `save/sota/*.pt`,没有就退回
+`save/releases/<名字>/model.safetensors`。所以全新 clone 只要下发布包就能跑
+回归,不必先训一遍。
+
+`save/sota/README.md` 里还记着几个消融用的 checkpoint(v6 / v6.5 / MacBERT
+对照组),它们只服务于那份消融表,不参与发布。
+
 ## 推理代码是真实文件
 
 `save/assets/` 下是真实的 `.py`,不是导出脚本里的字符串模板 —— 模板在发出去
