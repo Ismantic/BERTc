@@ -31,10 +31,12 @@ bash prepare/install_deps.sh
 一旦变了,词表就和已发布模型的 embedding 对不上,而代码不会报错**,只会
 悄悄训出垃圾结果。
 
-只做微调的话,Wapic 可以不装:
+只做微调的话,Wapic 不用编译,但要 clone —— PD-1998 标注语料在它仓库的
+`data/PeopleDaily1998.zip` 里:
 
 ```bash
-bash prepare/install_deps.sh piece
+bash prepare/install_deps.sh piece        # 编译 PieceTokenizer
+bash prepare/install_deps.sh wapic-data   # 只 clone Wapic,不编译不下模型
 ```
 
 ## 拿骨干

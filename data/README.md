@@ -37,7 +37,7 @@ Chinese-FineWeb-Edu 9745 个 parquet),不能无参数 `snapshot_download`。
 
 | 源 | 出处 | 提供 |
 |---|---|---|
-| PD-1998 | GitHub `chenhui-bupt/PeopleDaily1998` | CWS / POS / NER 标注 |
+| PD-1998 | Wapic 仓库自带 `data/PeopleDaily1998.zip` | CWS / POS / NER 标注 |
 | CTCDataset | GitHub `zejunwang1/CTCDataset` | CSC 主力:CCTC / CTC2021 / MCSCSet / ECSpell / lemon / cscd-ns / sighan / yacsc / Wang271k |
 | MCSCSet | GitHub `yzhihao/MCSCSet` | 医疗 CSC 专家标注 199,763 条 |
 | Wang271K | HF `shibing624/CSC` | CSC 标准训练集 |
@@ -46,7 +46,9 @@ Chinese-FineWeb-Edu 9745 个 parquet),不能无参数 `snapshot_download`。
 
 两个坑:
 
-- PD-1998 的压缩包名叫 `199801.zip`,里面是 **199801.txt ~ 199806.txt 六个月**。
+- PD-1998 随 Wapic 一起 clone,不单独下载 —— 没 clone 过的话
+  `bash prepare/install_deps.sh wapic-data`(只 clone,不编译)。
+  解压出的目录名叫 `199801`,里面是 **199801.txt ~ 199806.txt 六个月**。
   train = 前 5 月(102,739 句),dev = 199806(21,143 句)
 - **SIGHAN-15 测试集有两个版本。** 用的是 707 条那版(PyCorrector 口径)。
   CTCDataset 里的 `sighan15_test.jsonl` 是 1100 条的另一版,不能混用
@@ -69,8 +71,10 @@ Chinese-FineWeb-Edu 9745 个 parquet),不能无参数 `snapshot_download`。
 3. 整文件排除 `NLPCC2023/grammar/`(HSK + MuCGEC,语法纠错)、`val_bak`、
    以及 SIGHAN-15 测试集
 
-PD-1998 完全可复现:从 GitHub 重下 → `process_cws.py`,产出的 6 份 jsonl
-与已发布 MT 模型的实际训练输入逐字节相同。
+PD-1998 完全可复现:重新 clone Wapic → `process_cws.py`,产出的 6 份 jsonl
+与已发布 MT 模型的实际训练输入逐字节相同。Wapic 里那份 zip 与上游
+`chenhui-bupt/PeopleDaily1998` 的 `199801.zip` 也逐字节相同(SHA256
+`17474bbf…`),换源不影响任何结果。
 
 ## 代理
 

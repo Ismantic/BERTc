@@ -4,6 +4,10 @@
 所以这里登记的每个源都必须有公开出处,不允许指向本机的既有目录 ——
 一旦允许"本地已有就跳过下载",别人克隆下来跑不通,而自己永远发现不了。
 
+例外是 kind="dep-file":文件随 deps/ 下 clone 的依赖仓库一起来。这不算
+"指向本机既有目录",因为那些仓库本身也是从 GitHub clone 的,
+prepare/install_deps.sh 会保证它们存在。
+
 下载落在 BERTC_DATA_ROOT(默认仓库内 data/downloads/),
 加工产物落在 BERTC_DERIVED_ROOT(默认 data/derived/),两者都 gitignore。
 
@@ -15,6 +19,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
+# clone 的 C++ 依赖。跟 prepare/install_deps.sh 用同一个环境变量。
+DEPS_DIR = Path(os.environ.get("BERTC_DEPS_DIR", str(REPO_ROOT / "deps")))
 # 下载落地根。默认在仓库内,换机器不用改任何东西。
 DATA_ROOT = Path(os.environ.get("BERTC_DATA_ROOT",
                                 str(REPO_ROOT / "data" / "downloads")))
@@ -34,6 +40,7 @@ class Source:
       hf-snapshot HF 数据集,整仓下载(小仓库)
       github-file GitHub 单文件(raw.githubusercontent),zip 自动解压
       github-repo GitHub 仓库,git clone --depth 1
+      dep-file    已 clone 的 C++ 依赖里自带的文件(见 dep_file),zip 自动解压
     """
     name: str
     kind: str
@@ -42,7 +49,11 @@ class Source:
     part_glob: str                 # 相对 dir();github-file 时就是文件名
     n_parts: int | None = None     # None = 全量
     allow_patterns: list[str] = field(default_factory=list)
+    dep_file: str = ""             # dep-file 专用,相对 DEPS_DIR
     note: str = ""
+
+    def dep_src(self) -> Path:
+        return DEPS_DIR / self.dep_file
 
     def dir(self) -> Path:
         return DATA_ROOT / self.subdir
@@ -113,10 +124,14 @@ PRETRAIN_SOURCES = {
 
 FINETUNE_SOURCES = {
     "pd1998": Source(
-        name="pd1998", kind="github-file", repo_id="chenhui-bupt/PeopleDaily1998",
-        subdir="PeopleDaily1998", part_glob="199801.zip", n_parts=None,
-        note="PD-1998 PFR 标注语料。压缩包名叫 199801,里面其实是 "
-             "199801.txt ~ 199806.txt 六个月。data/process_cws.py 解析成 jsonl。",
+        name="pd1998", kind="dep-file", repo_id="Ismantic/Wapic",
+        subdir="PeopleDaily1998", part_glob="199801/*.txt", n_parts=None,
+        dep_file="Wapic/data/PeopleDaily1998.zip",
+        note="PD-1998 PFR 标注语料,随 Wapic 仓库一起 clone 下来(与上游 "
+             "chenhui-bupt/PeopleDaily1998 的 199801.zip 逐字节相同)。"
+             "解压出的目录名叫 199801,里面其实是 199801.txt ~ 199806.txt "
+             "六个月。data/process_cws.py 解析成 jsonl。"
+             "没有的话:bash prepare/install_deps.sh wapic-data",
     ),
 }
 

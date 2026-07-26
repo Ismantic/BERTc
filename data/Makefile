@@ -7,7 +7,8 @@
 #
 # 分开跑:
 #   make download-pretrain   只下预训练语料
-#   make download-finetune   只下下游任务数据
+#   make download-finetune   只下下游任务数据(PD-1998 需要先 clone Wapic,
+#                            见 prepare/install_deps.sh wapic-data)
 #   make download-skypile    只下某一个源(源名见 make status)
 #   make process-docs        PeopleDaily / CnnDailyMail → documents.txt
 #   make process-cws         PD-1998 → cws/pos/ner jsonl
@@ -27,7 +28,7 @@ HERE := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
         process process-docs process-cws process-csc clean-derived help
 
 help:
-	@sed -n '2,25p' $(HERE)Makefile | sed 's/^# \{0,1\}//'
+	@awk 'NR>1 && /^#/ {sub(/^# ?/, ""); print; next} NR>1 {exit}' $(HERE)Makefile
 
 all: download process
 
@@ -59,7 +60,8 @@ process: process-docs process-cws process-csc
 process-docs:
 	$(PY) $(HERE)process.py --all
 
-# PD-1998 的 PFR 标注 → 分词 / 词性 / 实体三套 jsonl,喂 MT 微调
+# PD-1998 的 PFR 标注 → 分词 / 词性 / 实体三套 jsonl,喂 MT 微调。
+# 语料随 Wapic 仓库一起 clone,不单独下载。
 process-cws:
 	$(PY) $(HERE)process_cws.py
 

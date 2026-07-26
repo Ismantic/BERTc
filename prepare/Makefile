@@ -1,6 +1,7 @@
 # BERTc 编排层:装依赖 → 预编码 → 预训练 → 微调
 #
 #   make deps                clone + 编译 PieceTokenizer / Wapic
+#   make deps-wapic-data     只 clone Wapic 拿 PD-1998 语料(微调够用)
 #   make datasets            下游数据集预编码(MT + CSC)
 #   make corpus              预训练语料切块(约 4.6 小时,产出 180G)
 #   make pretrain            预训练(单卡 4090:mid 约 2 天,large 约 4 天)
@@ -53,10 +54,11 @@ endif
 BACKBONE := $(OUT)/$(NAME)
 CKPT     ?= $(BACKBONE)/checkpoint-8500
 
-.PHONY: help status deps datasets corpus pretrain finetune finetune-mt finetune-csc
+.PHONY: help status deps deps-wapic-data datasets corpus pretrain finetune \
+        finetune-mt finetune-csc
 
 help:
-	@sed -n '2,22p' $(HERE)/Makefile | sed 's/^# \{0,1\}//'
+	@awk 'NR>1 && /^#/ {sub(/^# ?/, ""); print; next} NR>1 {exit}' $(HERE)/Makefile
 
 status:
 	@printf '规格      SIZE=%s → %s(%sL,batch %s×%s)\n' \
@@ -75,6 +77,10 @@ status:
 
 deps:
 	bash $(HERE)/install_deps.sh
+
+# 只 clone Wapic 拿 PD-1998 语料,不编译不下模型。给只做微调的人用。
+deps-wapic-data:
+	bash $(HERE)/install_deps.sh wapic-data
 
 # ---------------------------------------------------------------- 下游数据集
 

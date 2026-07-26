@@ -13,8 +13,11 @@ PFR 格式:
   train: 199801-199805
   dev:   199806
 
-源:chenhui-bupt/PeopleDaily1998 的 199801.zip —— 目录名叫 199801,里面其实是
-199801.txt ~ 199806.txt 六个月。先 `python data/download.py pd1998` 下载+解压。
+源:Wapic 仓库自带的 data/PeopleDaily1998.zip(与上游
+chenhui-bupt/PeopleDaily1998 的 199801.zip 逐字节相同)。解压出的目录名叫
+199801,里面其实是 199801.txt ~ 199806.txt 六个月。
+先 `python data/download.py pd1998` 解压;Wapic 还没 clone 的话
+`bash prepare/install_deps.sh wapic-data`。
 
 产出与 v4-Large MT SOTA 实际训练输入一致:train 102,739 行 / dev 21,143 行。
 

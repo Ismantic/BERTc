@@ -5,7 +5,11 @@
 #   bash prepare/install_deps.sh              # 两个都装 + 下 Wapic 模型
 #   bash prepare/install_deps.sh piece        # 只装 PieceTokenizer
 #   bash prepare/install_deps.sh wapic        # 只装 Wapic(含模型)
+#   bash prepare/install_deps.sh wapic-data   # 只 clone Wapic,不编译不下模型
 #   bash prepare/install_deps.sh --verify     # 不装,只跑行为校验
+#
+# wapic-data 是给只做微调的人用的:PD-1998 标注语料在 Wapic 仓库的
+# data/PeopleDaily1998.zip 里,拿它只需要 clone,不需要编译分词器。
 #
 # 仓库默认 clone 到 BERTC_DEPS_DIR(默认 <仓库>/deps),已有就 git pull。
 # 想用本机既有的 checkout:BERTC_DEPS_DIR=/home/tfbao/Shiyu bash prepare/install_deps.sh
@@ -78,13 +82,26 @@ install_wapic() {
     echo "  BERTC_WAPIC_MODEL=$model"
 }
 
+# 只 clone,不 pip install、不下模型。给只做微调的人拿 PD-1998 语料用。
+install_wapic_data() {
+    log "Wapic 仓库(只 clone)"
+    git_clone_or_pull "$WAPIC_URL" "$WAPIC_REPO"
+    local zip="$WAPIC_REPO/data/PeopleDaily1998.zip"
+    [[ -f "$zip" ]] && echo "  PD-1998 $zip ($(du -h "$zip" | cut -f1))" \
+                    || { echo "  !! 仓库里没有 data/PeopleDaily1998.zip"; exit 1; }
+}
+
 case "$TARGET" in
-    piece)    install_piece ;;
-    wapic)    install_wapic ;;
-    all)      install_piece; install_wapic ;;
-    --verify) ;;
-    *)        echo "用法: $0 [all|piece|wapic|--verify]"; exit 1 ;;
+    piece)      install_piece ;;
+    wapic)      install_wapic ;;
+    wapic-data) install_wapic_data ;;
+    all)        install_piece; install_wapic ;;
+    --verify)   ;;
+    *)          echo "用法: $0 [all|piece|wapic|wapic-data|--verify]"; exit 1 ;;
 esac
 
-log "校验:行为与 test/fixtures/tokenizer_baseline.json 是否一致"
-cd "$REPO_ROOT" && "$PY" test/test_tokenizer.py
+# wapic-data 没装任何东西,没什么可校验的
+if [[ "$TARGET" != "wapic-data" ]]; then
+    log "校验:行为与 test/fixtures/tokenizer_baseline.json 是否一致"
+    cd "$REPO_ROOT" && "$PY" test/test_tokenizer.py
+fi

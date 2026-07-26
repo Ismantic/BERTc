@@ -61,10 +61,13 @@ python -m src.pretrain / src.finetune_mt / src.finetune_csc
   - **PieceTokenizer** 提供字级分词器**和词表**。词表是
     `deps/PieceTokenizer/save/BERTc-Tokenizer.pt`,通过 `piece_tokenizer.__file__`
     反查定位,本仓库不留副本。加载必须传 `dict="no"`(字模式)。
-  - **Wapic** 是 CRF 分词器,只在预训练做整词掩码时用。模型从 HF
+  - **Wapic** 是 CRF 分词器,预训练做整词掩码时用。模型从 HF
     `Ismantic/wapic-cws` 下到 `deps/Wapic/data/model/wapic-cws.wac`。
     用 `segment`(不是 `segment_raw`,后者把空白也当 token);
     `word_starts` 直接给词首字符偏移,做 WWM 最省事。
+    它还自带 **PD-1998 标注语料**(`deps/Wapic/data/PeopleDaily1998.zip`,
+    与上游 chenhui-bupt/PeopleDaily1998 逐字节相同),所以 MT 微调也依赖这个
+    clone —— 但不用编译,`install_deps.sh wapic-data` 只 clone。
 
 ## 不能改错的地方
 

@@ -174,6 +174,33 @@ def download_github(src: source.Source, dry: bool) -> None:
                 print(f"    解压 {len(names)} 项 → {dest}")
 
 
+def unpack_dep(src: source.Source, dry: bool) -> None:
+    """kind=dep-file:文件已经随 deps/ 下的依赖仓库 clone 下来了,只需解压。
+
+    不拷贝 zip 到 DATA_ROOT —— deps/ 是 git clone,产物落在这边就够了,
+    也别去弄脏那个 clone。
+    """
+    zip_path = src.dep_src()
+    dest = src.dir()
+    print(f"  {zip_path} → {dest}")
+    if not zip_path.exists():
+        print(f"    !! 找不到 {zip_path}")
+        print(f"       {src.repo_id} 还没 clone。只做微调的话:")
+        print("         bash prepare/install_deps.sh wapic-data")
+        print("       要跑预训练的话装全套:make -C prepare deps")
+        return
+    if dry:
+        return
+    dest.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(zip_path) as zf:
+        names = zf.namelist()
+        if all((dest / n).exists() for n in names):
+            print("    已解压,跳过")
+        else:
+            zf.extractall(dest)
+            print(f"    解压 {len(names)} 项 → {dest}")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -227,6 +254,8 @@ def main() -> None:
             download_github(src, args.dry_run)
         elif src.kind == "github-repo":
             download_github_repo(src, args.dry_run)
+        elif src.kind == "dep-file":
+            unpack_dep(src, args.dry_run)
         else:
             print(f"  !! 未知 kind {src.kind}")
 

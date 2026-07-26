@@ -53,7 +53,9 @@ make -C prepare deps
 
 - **PieceTokenizer** —— 字级分词器,同时提供词表(`BERTc-Tokenizer.pt`)。
   本仓库不留副本,靠 `piece_tokenizer.__file__` 反查定位
-- **Wapic** —— CRF 分词器,只用来标预训练的词边界,微调不需要
+- **Wapic** —— CRF 分词器,用来标预训练的词边界;仓库里还自带 PD-1998 标注
+  语料(`data/PeopleDaily1998.zip`),微调也要用。只做微调的话不必编译,
+  `bash prepare/install_deps.sh wapic-data` 只 clone
 
 编码行为一旦变了,词表就和已发布模型对不上,而代码不会报错。`make deps`
 装完会自动比对,输出 `校验通过` 才算成功。

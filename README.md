@@ -144,7 +144,8 @@ C++17 编译器):
 - [PieceTokenizer](https://github.com/Ismantic/PieceTokenizer) —— 字级分词器,
   同时提供词表
 - [Wapic](https://github.com/Ismantic/Wapic) —— CRF 中文分词器,标整词掩码的
-  词边界,只有预训练用得到
+  词边界。仓库里还自带 PD-1998 标注语料,所以微调也要 clone 它(不必编译:
+  `bash prepare/install_deps.sh wapic-data`)
 
 ## 许可
 
