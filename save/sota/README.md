@@ -7,7 +7,7 @@ SOTA + 次好的**硬链接**(同 inode;Summer/BERT/ 已删但 BERTc 这端 inod
 | 文件 | 任务 | 指标 | 用于 |
 |---|---|---|---|
 | `sota_mt_v4large_fgm_5ep_best.pt` | **MT joint(CWS/POS/NER)** | **score 1.4712**(cws **0.9840** / pos **0.9800** / ner **0.9660**)| **v4-Large 316M**,2026-06-12 取代 v4-Mid |
-| `sota_csc_v4large_v8_best.pt` | **CSC(SIGHAN-15)** | **F1 0.8346**(P 0.9407 R 0.7480 acc 0.8359)| **v4-Large 316M**,8-run chain 调优,2026-06-14 取代 v4-Mid |
+| `sota_csc_v4large_v8_best.pt` | **CSC(SIGHAN-15)** | **F1 0.8388**(P 0.9461 R 0.7534 acc 0.8472)| **v4-Large 316M**,8-run chain 调优,2026-06-14 取代 v4-Mid |
 | `sota_cws_v6_fgm_5ep_best.pt` | **单 CWS** | clean F1 0.9819 | 纯切词任务(未更新)|
 
 ## 旧 SOTA(保留对照)
@@ -16,7 +16,7 @@ SOTA + 次好的**硬链接**(同 inode;Summer/BERT/ 已删但 BERTc 这端 inod
 |---|---|---|---|
 | `sota_mt_v4mid_fgm_5ep_best.pt` | MT joint | score 1.4689 | v4-Mid 165M,被 v4-Large 超 +0.0023 |
 | `sota_mt_v65_fgm_5ep_best.pt` | MT joint | score 1.4636 | v6.5 165M,被 v4-Mid 超 +0.0053 |
-| `sota_csc_v4mid_5ep_best.pt` | CSC SIGHAN-15 | F1 0.8308 | v4-Mid 165M,被 v4-Large v8 超 +0.0038 |
+| `sota_csc_v4mid_5ep_best.pt` | CSC SIGHAN-15 | F1 0.8333 | v4-Mid 165M,被 v4-Large v8 超 +0.0038 |
 
 ## 次好
 
@@ -135,7 +135,7 @@ ckpt = torch.load("sota_csc_v4mid_5ep_best.pt", map_location="cpu")
 
 | 模型 | size | recipe | F1 | P | R |
 |---|---|---|---|---|---|
-| **BERTc v4-Mid(tied,新 SOTA)** | **165M** | 5ep b64 lr5e-5 | **0.8308** | 0.9516 | 0.7373 |
+| **BERTc v4-Mid(tied)** | **165M** | 5ep b64 lr5e-5 | **0.8333** | 0.9582 | 0.7373 |
 | MacBERT-large CSC | 326M | 5ep b32 lr2e-5 | **0.8309** | 0.9302 | 0.7507 |
 | MacBERT4CSC(开源,pycorrector 复现)| 110M | — | 0.8314 | 0.9274 | 0.7534 |
 | RoBERTa-wwm CSC v3 | 110M | 10ep b32 lr5e-5 | 0.7970 | 0.8907 | 0.7212 |
@@ -143,6 +143,16 @@ ckpt = torch.load("sota_csc_v4mid_5ep_best.pt", map_location="cpu")
 | BERTc v4-Mid CSC v1(无 tied)| 165M | 同上但 fresh head | 0.7802 | 0.9231 | 0.6756 |
 
 **v4-Mid tied 持平 MacBERT-large(326M),半参数下达 MacBERT4CSC baseline 同水平**。
+
+> **2026-07-26 口径修正。** BERTc 两行是修正后的数字(315M 0.8346→0.8388,
+> 165M 0.8308→0.8333)。原来 `evaluate_csc` 的预测侧把整句从 id 还原,字级
+> 词表多对一,词表外的字撞同一个字节 id 被还原成别的字(噌→塶、讬→茌),
+> 模型没改动的位置被判成没纠对,707 条里 5 条中招。现在预测侧改为从原文出发、
+> 只替换模型确实改动的位置。
+>
+> **本表其余四行仍是修正前的口径,同样低估约 0.004。** MacBERT-large CSC 和
+> RoBERTa-wwm CSC 是自己微调的,checkpoint 在 2026-07-25 的误删里没了,无法
+> 重测;所以跨行比较时要把这 0.004 计进去。
 
 
 ## 评测口径
@@ -165,5 +175,5 @@ python test/test_reproduce_sota.py
 ```
 
 拿本目录的 checkpoint 跑完整评测,对照本文档记录的数字。这是判断代码有没有
-改坏的硬标准 —— 2026-07-25 的四层重构就是靠它确认 MT 1.4712 和 CSC 0.8346
+改坏的硬标准 —— 2026-07-25 的四层重构就是靠它确认 MT 1.4712 和 CSC 0.8388
 一位不差地复现了。

@@ -1,6 +1,6 @@
 """中文拼写纠错(CSC)微调。只依赖 torch。
 
-这是 CSC SOTA(SIGHAN-15 F1 0.8346,HF 上的 Ismantic/BERTc-315M-CSC)的训练脚本。
+这是 CSC SOTA(SIGHAN-15 F1 0.8388,HF 上的 Ismantic/BERTc-315M-CSC)的训练脚本。
 recipe:10 epoch、batch 32、lr 3e-5、warmup 0.1、det_weight 0.3、threshold 0.7。
 
 双头:

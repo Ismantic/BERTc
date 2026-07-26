@@ -19,7 +19,7 @@ BACKBONES = {
         "params": "165M",
         "arch": "12L / 1024H / 2752I / 16 heads",
         "mt": "score 1.4689(CWS 0.9836 / POS 0.9753 / NER 0.9632)",
-        "csc": "SIGHAN-15 句级 F1 0.8308",
+        "csc": "SIGHAN-15 句级 F1 0.8333",
         "notes": "首个在 165M 规模同时拿到 MT / CSC SOTA 的 Modern BERTc 骨干。",
     },
     "BERTc-315M": {
@@ -27,7 +27,7 @@ BACKBONES = {
         "params": "315M",
         "arch": "24L / 1024H / 2752I / 16 heads",
         "mt": "score 1.4712(CWS 0.9840 / POS 0.9800 / NER 0.9660)",
-        "csc": "SIGHAN-15 句级 F1 0.8346",
+        "csc": "SIGHAN-15 句级 F1 0.8388",
         "notes": "当前最强的 Modern BERTc 骨干,用完整 17.65B token 语料训练。",
     },
 }
@@ -61,8 +61,8 @@ FINETUNES = {
         "base": "BERTc-315M",
         "backbone": BACKBONES["BERTc-315M"]["checkpoint"],
         "checkpoint": ROOT / "save" / "sota" / "sota_csc_v4large_v8_best.pt",
-        "metrics": {"句级 F1": "0.8346", "准确率": "0.8430",
-                    "精确率": "0.9396", "召回率": "0.7507"},
+        "metrics": {"句级 F1": "0.8388", "准确率": "0.8472",
+                    "精确率": "0.9461", "召回率": "0.7534"},
         "recipe": "10 epoch,batch 32,lr 3e-5,warmup 0.1,"
                   "det_weight 0.3,纠错阈值 0.7,max_len 128",
         "data": "SIGHAN 13/14/15 的 train + Wang271K,去重后 249,975 对",
@@ -72,7 +72,7 @@ FINETUNES = {
         "base": "BERTc-165M",
         "backbone": BACKBONES["BERTc-165M"]["checkpoint"],
         "checkpoint": ROOT / "save" / "sota" / "sota_csc_v4mid_5ep_best.pt",
-        "metrics": {"句级 F1": "0.8308"},
+        "metrics": {"句级 F1": "0.8333"},
         "recipe": "5 epoch,batch 64,lr 5e-5,其余同 315M-CSC",
         "data": "同 315M-CSC",
     },

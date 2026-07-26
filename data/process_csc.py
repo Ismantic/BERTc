@@ -1,6 +1,6 @@
 """把 CSC 源合并成 (错句, 正句) 对,去重后写 pkl。
 
-配方 sighan_wang271k —— 已发布的 CSC 模型(F1 0.8346)用的就是这份:
+配方 sighan_wang271k —— 已发布的 CSC 模型(F1 0.8388)用的就是这份:
 
     wang271k/train.json                     Wang271K + SIGHAN,27.6 万对
     CTCDataset/sighan/sighan13_train.jsonl  SIGHAN-13 训练集

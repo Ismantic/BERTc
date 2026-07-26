@@ -15,7 +15,7 @@ python -m save.upload --namespace Ismantic --dry-run  # 先看要传什么
 |---|---|---|
 | `BERTc-165M` / `BERTc-315M` | Backbone + MLM 头 | — |
 | `BERTc-165M-MT` / `BERTc-315M-MT` | CWS + POS + NER | joint 1.4689 / 1.4712 |
-| `BERTc-165M-CSC` / `BERTc-315M-CSC` | Correction | 句级 F1 0.8308 / 0.8346 |
+| `BERTc-165M-CSC` / `BERTc-315M-CSC` | Correction | 句级 F1 0.8333 / 0.8388 |
 
 Backbone 和微调分开发布。两个任务的头、评测口径、推理入口都不同,合并成一个
 仓库会让使用者难以判断该用哪个。

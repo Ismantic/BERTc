@@ -85,7 +85,7 @@ python -m src.pretrain / src.finetune_mt / src.finetune_csc
   文件,`src/evaluate.py` 用它。
 - **CSC 的 `det_labels` 按字比对,不能按 id**。理由同上,按 id 会漏掉错字。
 - **CSC 的 `correct()` 只用纠错头,不用检测头**。检测头是训练时的辅助信号,
-  这与训出 0.8346 的口径一致,不要改成用 det 过滤。
+  这与训出 0.8388 的口径一致,不要改成用 det 过滤。
 - **预训练语料不能逐字编码**。字模式下 tokenizer 只对中文一字一 token,
   英文单词整体成一个 piece、空格成 `▁`。`prepare/encode_corpus.py` 整串编码后
   按字符游标把 piece 对回原文才能拿到词边界。
@@ -100,7 +100,7 @@ python -m src.pretrain / src.finetune_mt / src.finetune_csc
 ## 测试
 
 ```bash
-python test/test_reproduce_sota.py   # 拿真 checkpoint 复现 MT 1.4712 / CSC 0.8346
+python test/test_reproduce_sota.py   # 拿真 checkpoint 复现 MT 1.4712 / CSC 0.8388
 python test/test_save.py             # 发布目录能否独立跑
 python test/test_provenance.py       # 每个中间产物都有生产者(秒级,无依赖)
 python test/test_tokenizer.py        # C++ 依赖重建后行为有没有变

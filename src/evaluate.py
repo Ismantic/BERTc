@@ -164,10 +164,16 @@ def evaluate_csc(model, dataset, collator, device, id_to_char: dict,
       原句!=答案 但 预测!=答案 → FN(没改对)
     整句必须完全一致才算对,改对一半不给分。
 
-    **参照必须用 src_texts / tgt_texts 里的原文**(prepare/ 写进数据集文件)。
-    id→字 的往返是有损的:不同的字可能撞到同一个 id,而且截断会丢尾巴。
-    拿还原出来的文本当参照,分数会虚高(实测 SIGHAN-15 上 +0.006)。
-    预测那一侧没有别的办法,只能走还原。
+    **参照和预测两侧都要用原文**(src_texts / tgt_texts,由 prepare/ 写进数据集
+    文件)。id→字 的往返是有损的:字级词表多对一,词表外的字走字节回退后撞同一个
+    id,反查表只记得先见到的那个。
+
+    - 参照侧走还原,分数会**虚高**(实测 SIGHAN-15 上 +0.006)
+    - 预测侧走还原,分数会**虚低**:模型没改动的位置被还原成别的字(噌→塶、
+      讬→茌),判成没纠对。707 条里有 5 条中招,F1 −0.0042
+
+    所以预测侧的做法是:从原文出发,只在模型确实改了的位置替换成预测字。
+    发布包 save/assets/csc_model.py 的 correct() 一直是这么做的。
     """
     was_training = model.training
     model.eval()
@@ -175,9 +181,20 @@ def evaluate_csc(model, dataset, collator, device, id_to_char: dict,
                         collate_fn=collator, num_workers=0)
 
     def to_text(ids, fallback):
-        """id → 字。表里没有的 id 保留原字。"""
+        """id → 字。表里没有的 id 保留原字。只在拿不到原文时用。"""
         return "".join(id_to_char.get(int(t), id_to_char.get(int(f), ""))
                        for t, f in zip(ids, fallback))
+
+    def splice(src: str, pred_ids, src_ids, n: int) -> str:
+        """从原文出发,只替换模型改动过的位置 —— 不碰的字不经过 id 往返。"""
+        chars = list(src[:n])
+        for j in range(n):
+            if int(pred_ids[j]) == int(src_ids[j]):
+                continue
+            c = id_to_char.get(int(pred_ids[j]))
+            if c and len(c) == 1:       # 只接受单字替换,保证不改变长度
+                chars[j] = c
+        return "".join(chars) + src[n:]
 
     tp = fp = fn = tn = 0
     idx = 0
@@ -192,13 +209,14 @@ def evaluate_csc(model, dataset, collator, device, id_to_char: dict,
 
         for i in range(src_ids.size(0)):
             n = int(batch["attention_mask"][i].sum())
-            pred = to_text(pred_ids[i, :n], src_ids[i, :n])
             if src_texts is not None:
                 src, tgt = src_texts[idx], tgt_texts[idx]
-                pred = pred + src[n:]          # 超出 max_len 的尾巴原样接回
+                pred = splice(src, pred_ids[i], src_ids[i], n)
             else:
+                # 没有原文可依时只能整句还原,三侧口径一致,自洽但会偏
                 src = to_text(src_ids[i, :n], src_ids[i, :n])
                 tgt = to_text(cor_ids[i, :n], src_ids[i, :n])
+                pred = to_text(pred_ids[i, :n], src_ids[i, :n])
             idx += 1
             if src == tgt:
                 tn += (tgt == pred)

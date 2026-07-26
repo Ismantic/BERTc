@@ -30,7 +30,7 @@ SOTA = ROOT / "save" / "sota"
 
 # save/sota/README.md 记录的数
 EXPECT_MT = {"cws_f1": 0.9840, "pos_acc": 0.9800, "ner_f1": 0.9660, "score": 1.4712}
-EXPECT_CSC_F1 = 0.8346
+EXPECT_CSC_F1 = 0.8388
 TOL = 0.005          # 允许的偏差
 DEV_LIMIT = 2000     # 原训练脚本 --eval_dev_limit 的默认值
 SKIPPED = -1         # 缺输入而没跑。绝不能和"跑了且通过"混为一谈
