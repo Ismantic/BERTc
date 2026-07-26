@@ -4,7 +4,7 @@
 large(315M)约 4 天**,外加准备阶段约 8 小时。
 
 只想在下游任务上微调的话不用看这篇 —— 直接拉现成骨干,见
-[`FINETUNE.md`](FINETUNE.md),几小时就能出结果。
+[`FINETUNE.md`](FINETUNE.md),几小时出结果。
 
 - [先算账](#先算账)
 - [准备依赖](#准备依赖)
@@ -66,7 +66,7 @@ make -C data status              # 看下齐了没
 | FineWiki enwiki | 全 15 个 parquet | 英 |
 | CnnDailyMail | 全量 | 英 |
 
-用量默认值是 v4-Large 实跑时的量,不是随手定的 —— 这几个源在 HF 上都是几百
+用量默认值取自 v4-Large 的实际训练用量。这几个源在 HF 上都是几百
 GB 全量,**不要无参数 `snapshot_download`**。想加量改
 `data/source.py` 里的 `n_parts`。
 
@@ -125,7 +125,7 @@ make -C prepare corpus
 
 ### 验证产出
 
-切完检查一下,免得白训两天:
+切完先验证,避免训练两天后才发现问题:
 
 ```python
 import sys; sys.path.insert(0, ".")
@@ -146,7 +146,7 @@ print(seg[:16])   # chunk 内从 0 起按出现顺序编号
 ```
 
 如果**全是 1**,说明 `word_starts` 没生效、整词掩码退化成了逐字掩码 ——
-而训练照样跑、loss 照样降,不会有任何报错。这是最值得单独确认的一项。
+而训练照常进行、loss 照常下降,不会报错。**这一项需要单独确认。**
 
 ## 开始训练
 
@@ -199,7 +199,7 @@ grad clip 0.5
 
 ## 盯什么
 
-**头 200 步**就能判断链路对不对:
+**头 200 步**即可判断链路是否正确:
 
 ```
 ✓ 参数量对得上           mid 164.6M / large 316.5M
@@ -223,7 +223,7 @@ LR / 掩码率 / 累积调度会自动续上(优化器动量不恢复,会重建)
 
 **磁盘不够**
 
-`prepare/corpus/` 那 168 GB 是硬需求。可以调小 `--target_tokens`:
+`prepare/corpus/` 的 168 GB 是必需的。可以调小 `--target_tokens`:
 
 ```bash
 make -C prepare corpus TARGET_TOKENS=10000000000   # 10B,约 84 GB

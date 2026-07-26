@@ -85,7 +85,7 @@ python -m src.pretrain / src.finetune_mt / src.finetune_csc
   文件,`src/evaluate.py` 用它。
 - **CSC 的 `det_labels` 按字比对,不能按 id**。理由同上,按 id 会漏掉错字。
 - **CSC 的 `correct()` 只用纠错头,不用检测头**。检测头是训练时的辅助信号,
-  这跟训出 0.8346 的口径一致,别"顺手"改成用 det 过滤。
+  这与训出 0.8346 的口径一致,不要改成用 det 过滤。
 - **预训练语料不能逐字编码**。字模式下 tokenizer 只对中文一字一 token,
   英文单词整体成一个 piece、空格成 `▁`。`prepare/pretokenize.py` 整串编码后
   按字符游标把 piece 对回原文才能拿到词边界。

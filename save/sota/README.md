@@ -94,7 +94,7 @@ SOTA + 次好的**硬链接**(同 inode;Summer/BERT/ 已删但 BERTc 这端 inod
 
 **Why**:Modern BERTc 用 Cramming 简化 MLM head(`logits = h @ embed.weight.T`,无 Dense/LN/GeLU),
 预训完 `last_hidden_state` 已经被优化成"直接乘 embed.weight 出 vocab logits"。CSC 用 fresh `nn.Linear(H, V)`
-作为 cor_head 会废掉这个对齐 — 实测 v4-Mid v1(fresh head)= 0.7802,v3(tied head)= **0.8308**,
+作为 cor_head 会破坏这个对齐 — 实测 v4-Mid v1(fresh head)= 0.7802,v3(tied head)= **0.8308**,
 差 -0.0506 pp。
 
 **How**:

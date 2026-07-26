@@ -82,7 +82,7 @@ prepare/datasets/mt_dev.pt      21,143 句
 ```
 
 PD-1998 是人民日报 1998 年 1–6 月的 PFR 标注语料。前 5 个月做训练,199806
-做 dev。压缩包名字叫 `199801` 但里面其实是六个月,不要被骗。
+做 dev。**压缩包名为 `199801`,但内容是六个月。**
 
 ### 训练
 
@@ -102,12 +102,12 @@ python -m src.finetune_mt \
 单张 4090 约 **135 分钟**。每个 epoch 结束评一次 dev,score 变好就存
 `best.pt`。
 
-参数里值得说的:
+几个参数的取值理由:
 
 | 参数 | 为什么 |
 |---|---|
 | `--alpha_pos 2.0` | 词性 loss 的量级天然比分词小,不加权只占 1.6% 的梯度,学不动。加权后词性 +0.02,追平 MacBERT |
-| `--beta_ner 0.5` | 反过来压实体,防止它抢容量 |
+| `--beta_ner 0.5` | 降低实体权重,避免它占用过多容量 |
 | `--fgm --fgm_eps 1.0` | 对抗训练:给词嵌入加受 L2 约束的扰动再算一次梯度。分词和实体各 +0.005~0.013 |
 | `--bert_lr` ≪ `--head_lr` | 骨干已经训好,大 lr 会冲坏;头是随机初始化的,要大 lr |
 | `--dev_limit 2000` | 只评前 2000 句。全量 21,143 句慢 10 倍,而且报告的指标就是这个口径 |
@@ -204,12 +204,12 @@ print(model.correct("他平时喜欢锻练身体"))   # 他平时喜欢锻炼身
 `threshold` 可以在调用时调:调低提召回,调高提精确率。
 
 > **注意**:`correct()` 只用纠错头的 argmax,**不用检测头**。检测头是训练时的
-> 辅助信号,推理不参与 —— 这跟训出 0.8346 的口径一致,别"顺手"改成用 det
+> 辅助信号,推理不参与。这与训出 0.8346 的口径一致,不要改成用 det
 > 过滤,那会改变报告的指标。
 
 ## 换成自己的数据
 
-`src/` 读的是预编码好的 id,格式定义在 `src/data.py` 的模块文档里。最省事的
+`src/` 读的是预编码好的 id,格式定义在 `src/data.py` 的模块文档里。改动量最小的
 做法是仿照 `prepare/build_mt.py` / `build_csc.py` 写一个自己的 builder:
 
 ```python
@@ -278,7 +278,7 @@ PieceTokenizer 在 2026-07 把 `load(model, cn_dict=)` 改成了 `load(model, di
 
 **下载失败**
 
-Hugging Face 走 `hf-mirror.com` 时**必须清代理**,GitHub 反过来**需要代理**。
+Hugging Face 走 `hf-mirror.com` 时**需要清代理**,GitHub **需要走代理**。
 `data/download.py` 和 `install_deps.sh` 已经处理了这个矛盾;手工下载时注意。
 换官方源:`HF_ENDPOINT= python data/download.py ...`。
 
