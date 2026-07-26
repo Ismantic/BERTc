@@ -26,7 +26,7 @@ BERTcForCSC.from_pretrained(".").correct("他平时喜欢锻练身体")
 
 | Hugging Face | 参数 | 任务 |
 |---|---|---|
-| [`Ismantic/BERTc-315M`](https://huggingface.co/Ismantic/BERTc-315M) · [`-165M`](https://huggingface.co/Ismantic/BERTc-165M) | 315M / 165M | Backbone,可继续微调 |
+| [`Ismantic/BERTc-315M`](https://huggingface.co/Ismantic/BERTc-315M) · [`-165M`](https://huggingface.co/Ismantic/BERTc-165M) | 315M / 165M | Backbone |
 | [`Ismantic/BERTc-315M-MT`](https://huggingface.co/Ismantic/BERTc-315M-MT) · [`-165M-MT`](https://huggingface.co/Ismantic/BERTc-165M-MT) | — | CWS + POS + NER |
 | [`Ismantic/BERTc-315M-CSC`](https://huggingface.co/Ismantic/BERTc-315M-CSC) · [`-165M-CSC`](https://huggingface.co/Ismantic/BERTc-165M-CSC) | — | Correction |
 
@@ -118,8 +118,8 @@ make -C prepare status      # 每一步产物在不在
 
 | | 时间 | 从哪开始 | 教程 |
 |---|---|---|---|
-| 微调 | 几小时 | HF 上的骨干 | [`docs/FINETUNE.md`](docs/FINETUNE.md) |
-| 预训练 | 2–4 天 + 8 小时准备 | 随机初始化 | [`docs/PRETRAIN.md`](docs/PRETRAIN.md) |
+| Finetune | 几小时 | HF 上的 Backbone | [`docs/FINETUNE.md`](docs/FINETUNE.md) |
+| Pretrain | 2–4 天 + 8 小时准备 | 随机初始化 | [`docs/PRETRAIN.md`](docs/PRETRAIN.md) |
 
 建议先跑微调 —— 几小时就有反馈,而且能验证整条链路(数据、词表、模型、评测)
 是通的。
