@@ -37,8 +37,9 @@ CSC 的 `cor_head.weight`(与词嵌入绑权重,导出时去重)。
 `save/releases/<名字>/model.safetensors`。全新 clone 下载发布包即可跑回归,
 无需先训练。
 
-`save/sota/README.md` 另记录了几个消融用的 checkpoint(v6 / v6.5 / MacBERT
-对照组),只用于那份消融表,不参与发布。
+`save/sota/` 里另有几个消融用的 checkpoint(v6 / v6.5 / MacBERT 对照组),
+不参与发布也不参与回归,留着是为了将来复查 [`docs/WHY.md`](../docs/WHY.md)
+里那几条结论。
 
 ## 推理代码是真实文件
 

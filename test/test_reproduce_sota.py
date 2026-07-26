@@ -1,4 +1,4 @@
-"""复现 save/sota/README.md 里记录的 SOTA 数字。
+"""复现 README.md 里公布的 SOTA 数字。
 
 改了 src/ 或 prepare/ 之后跑这个 —— 拿**真实的 SOTA checkpoint** 和 prepare/
 产出的真实数据集跑完整评测,对照记录的数字。这是判断有没有改坏的硬标准:
@@ -28,7 +28,7 @@ from src.finetune_mt import ModernBertMT                         # noqa: E402
 DATASETS = ROOT / "prepare" / "datasets"
 SOTA = ROOT / "save" / "sota"
 
-# save/sota/README.md 记录的数
+# README.md 表现表里公布的数。这里是这些数字的可执行来源。
 EXPECT_MT = {"cws_f1": 0.9840, "pos_acc": 0.9800, "ner_f1": 0.9660, "score": 1.4712}
 EXPECT_CSC_F1 = 0.8388
 TOL = 0.005          # 允许的偏差

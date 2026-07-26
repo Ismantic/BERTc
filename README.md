@@ -68,7 +68,7 @@ Correction (SIGHAN-15 官方 707 条，PyCorrector 口径):
 | BERTc-165M | 165M | 0.8333 | 0.9582 | 0.7373 |
 
 对比的基线是同一套评测代码在修正前的口径下测的,同样低估约 0.004。
-消融见 [`save/sota/README.md`](save/sota/README.md)。
+调参过程和噪声量级见 [`docs/WHY.md`](docs/WHY.md#csc-调参8-次实验测出来的)。
 
 ## 架构
 
