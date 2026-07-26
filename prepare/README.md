@@ -7,17 +7,17 @@ tokenizer 和分词器的地方 —— `src/` 只认预编码好的 id,从头到
 
 ```bash
 bash prepare/install_deps.sh          # clone + 编译 PieceTokenizer / Wapic
-bash prepare/run.sh data              # 下载 + 加工 + 预编码下游数据集
-bash prepare/run.sh pretokenize       # 语料 → 定长 chunk
-bash prepare/run.sh pretrain          # 预训练(单卡 4090 约 3-5 天)
-bash prepare/run.sh finetune          # MT + CSC 微调
+make -C data all              # 下载 + 加工 + 预编码下游数据集
+make -C prepare corpus       # 语料 → 定长 chunk
+make -C prepare pretrain          # 预训练(单卡 4090 约 3-5 天)
+make -C prepare finetune          # MT + CSC 微调
 ```
 
 两个已发布规格用同一个脚本,`SIZE` 切换:
 
 ```bash
-SIZE=large bash prepare/run.sh pretrain    # 24L/1024H ≈ 315M(默认)
-SIZE=mid   bash prepare/run.sh pretrain    # 12L/1024H ≈ 165M
+SIZE=large make -C prepare pretrain    # 24L/1024H ≈ 315M(默认)
+SIZE=mid   make -C prepare pretrain    # 12L/1024H ≈ 165M
 ```
 
 预训练配方两者**完全相同**,只差层数和 batch 切分(有效 batch 都是 4096:
@@ -28,7 +28,7 @@ large 用 b32 lr3e-5 10ep,因为 large 5 epoch 严重欠训。
 
 ```bash
 huggingface-cli download Ismantic/BERTc-315M --local-dir models/BERTc-315M
-CKPT=models/BERTc-315M bash prepare/run.sh finetune
+CKPT=models/BERTc-315M make -C prepare finetune
 ```
 
 ## 文件
@@ -41,7 +41,7 @@ pack.py           预编码数据的打包格式(扁平数组 + offsets)
 build_mt.py       PD-1998 jsonl → mt_{train,dev}.pt
 build_csc.py      CSC 句对 → csc_{train,test}.pt
 pretokenize.py    预训练语料 → .pt / .wid / .seg
-run.sh            全流程入口。SIZE=large(315M,默认)或 SIZE=mid(165M)
+Makefile          全流程入口。SIZE=large(315M)或 SIZE=mid(165M,默认)
 ```
 
 产物落在 `prepare/datasets/`(下游)和 `prepare/corpus/`(预训练),都不进 git。

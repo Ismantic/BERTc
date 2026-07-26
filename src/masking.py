@@ -95,8 +95,8 @@ def dynamic_mlm_prob(step: int, total_steps: int, warmup_frac: float = 0.05,
     前 warmup_frac 的 step:low → high,逼模型早期做全局推理;
     之后:high → low,后期转向局部精修。
 
-    注意 v4-Mid / v4-Large 实际上**关掉了**这个 curriculum(run_v4_*.sh 里
-    --mlm_low 和 --mlm_high 都传 0.15,即恒定 15%),因为 v4-Mid 的消融显示
+    注意 v4-Mid / v4-Large 实际上**关掉了**这个 curriculum
+    (--mlm_low 和 --mlm_high 都传 0.15,即恒定 15%),因为 v4-Mid 的消融显示
     固定 15% 就拿到了 MT/CSC 双 SOTA。保留实现是为了能复现 v3 以及后续实验。
     """
     if total_steps <= 0:

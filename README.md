@@ -99,26 +99,27 @@ save/       导出 HF 发布包并上传
 ## 上手
 
 ```bash
-bash prepare/install_deps.sh        # clone + 编译 PieceTokenizer / Wapic
-python data/download.py --list      # 看数据源状态
+make -C prepare deps        # clone + 编译 PieceTokenizer / Wapic
+make -C data status         # 看数据源下了没
+make -C prepare status      # 看每一步产物在不在
 ```
 
 三条链:
 
 ```bash
 # 下游数据 → 预编码
-python data/download.py --finetune
-python data/process_cws.py && python data/process_csc.py
-python -m prepare.build_mt && python -m prepare.build_csc
+make -C data download-finetune
+make -C data process-cws process-csc
+make -C prepare datasets
 
 # 从 HF 拉骨干做微调(不用预训练)
 huggingface-cli download Ismantic/BERTc-315M --local-dir models/BERTc-315M
-CKPT=models/BERTc-315M bash prepare/run.sh finetune
+CKPT=models/BERTc-315M make -C prepare finetune
 
 # 从零预训练(单张 4090 约 3-5 天)
-python data/download.py --pretrain && python data/process.py --all
-python -m prepare.pretokenize --output prepare/corpus/v4.pt
-bash prepare/run.sh pretrain
+make -C data download-pretrain process-docs
+make -C prepare corpus
+make -C prepare pretrain SIZE=large
 ```
 
 细节见各层的 README 和 [`docs/FINETUNE.md`](docs/FINETUNE.md)。

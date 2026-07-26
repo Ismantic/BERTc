@@ -22,7 +22,7 @@ deps/ docs/ test/
 bash prepare/install_deps.sh            # clone + 编译 PieceTokenizer / Wapic
 python data/download.py --list          # 数据源状态
 huggingface-cli download Ismantic/BERTc-315M --local-dir models/BERTc-315M
-bash prepare/run.sh finetune   # MT + CSC 微调
+make -C prepare finetune   # MT + CSC 微调
 python test/test_reproduce_sota.py      # 复现 MT 1.4712 / CSC 0.8346
 ```
 

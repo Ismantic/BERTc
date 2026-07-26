@@ -75,5 +75,5 @@ lemon、ECSpell、CTC2021 等)。
 
 ### 165M 的微调没跑过
 
-`prepare/run.sh` 已经支持 `SIZE=mid`,但只验证了参数拼装正确,没实跑。
+`prepare/Makefile` 已经支持 `SIZE=mid`,但只验证了参数拼装正确,没实跑。
 315M 的 MT / CSC 都复现过(1.4705 / 0.8274,记录 1.4712 / 0.8346)。
