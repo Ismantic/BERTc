@@ -1,7 +1,7 @@
 """BERTc-CSC 推理:中文拼写纠错。
 
 这份代码随模型一起发到 HF,只依赖同目录的 model.py / tokenizer.py
-和 torch + safetensors。
+和 torch。
 
     from csc_model import BERTcForCSC
     model = BERTcForCSC.from_pretrained(".")
@@ -12,7 +12,7 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
-from safetensors.torch import load_file
+from checkpoint import load_safetensors
 
 from model import ModernBertConfig, ModernBertModel
 from tokenizer import PieceCharTokenizer
@@ -38,8 +38,8 @@ class BERTcForCSC(nn.Module):
         model_dir = Path(model_dir)
         cfg = ModernBertConfig(**json.loads((model_dir / "config.json").read_text()))
         model = cls(cfg)
-        state = load_file(str(model_dir / "model.safetensors"),
-                          device=str(map_location))
+        state = load_safetensors(model_dir / "model.safetensors",
+                                 device=str(map_location))
         missing, unexpected = model.load_state_dict(state, strict=False)
         # cor_head.weight 跟 embed 共享,safetensors 不重复存,所以它一定"缺"
         if set(missing) != {"cor_head.weight"} or unexpected:

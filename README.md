@@ -138,6 +138,14 @@ make -C prepare status      # 每一步产物在不在
 
 Python 3.14 + torch 2.11,单张 RTX 4090(24GB,bf16),没有多卡代码路径。
 
+```bash
+uv pip install -r requirements.txt
+```
+
+`src/` 只依赖 torch;`requirements.txt` 里其余几个是 `data/` 下载加工、
+`prepare/` 预编码、`save/` 导出用的。**下载已发布模型的人一个都不需要** ——
+发布包只要 torch 和 PieceTokenizer。
+
 两个 C++ 依赖由 `make -C prepare deps` 自动 clone 并编译(需要 `cmake` 和
 C++17 编译器):
 

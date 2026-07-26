@@ -1,7 +1,7 @@
 """BERTc-MT 推理:中文分词 + 词性标注 + 命名实体识别。
 
 这份代码随模型一起发到 HF,只依赖同目录的 model.py / crf.py / tokenizer.py
-和 torch + safetensors,不 import 仓库里的东西。
+和 torch,不 import 仓库里的东西。
 
     from mt_model import BERTcForMT
     from tokenizer import PieceCharTokenizer
@@ -17,7 +17,7 @@ from pathlib import Path
 
 import torch
 import torch.nn as nn
-from safetensors.torch import load_file
+from checkpoint import load_safetensors
 
 from crf import CRF
 from model import ModernBertConfig, ModernBertModel
@@ -103,8 +103,8 @@ class BERTcForMT(nn.Module):
         model_dir = Path(model_dir)
         cfg = ModernBertConfig(**json.loads((model_dir / "config.json").read_text()))
         model = cls(cfg)
-        state = load_file(str(model_dir / "model.safetensors"),
-                          device=str(map_location))
+        state = load_safetensors(model_dir / "model.safetensors",
+                                 device=str(map_location))
         missing, unexpected = model.load_state_dict(state, strict=True)
         if missing or unexpected:
             raise RuntimeError(f"权重不匹配:缺 {missing},多 {unexpected}")

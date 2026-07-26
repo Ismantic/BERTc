@@ -29,8 +29,12 @@ _ST_DTYPE = {
 }
 
 
-def load_safetensors(path) -> dict:
-    """读 .safetensors → state_dict。纯 torch 实现。"""
+def load_safetensors(path, device=None) -> dict:
+    """读 .safetensors → state_dict。纯 torch 实现。
+
+    device 给了就把张量搬过去,省得调用方再遍历一遍(发布包里的推理代码
+    直接这么用)。
+    """
     path = Path(path)
     with open(path, "rb") as f:
         header_len = struct.unpack("<Q", f.read(8))[0]
@@ -50,7 +54,8 @@ def load_safetensors(path) -> dict:
         # 一直拖在内存里不释放。
         buf = bytearray(blob[lo:hi])
         t = torch.frombuffer(buf, dtype=dtype, count=(hi - lo) // dtype.itemsize)
-        out[name] = t.view(*spec["shape"]) if spec["shape"] else t
+        t = t.view(*spec["shape"]) if spec["shape"] else t
+        out[name] = t.to(device) if device is not None else t
     return out
 
 

@@ -5,14 +5,14 @@ from model import ModernBertConfig, ModernBertForMLM   # noqa: F401
 from tokenizer import PieceCharTokenizer
 
 import json
-from safetensors.torch import load_file
+from checkpoint import load_safetensors
 
 
 def load_bertc(model_dir="."):
     with open(f"{model_dir}/config.json") as f:
         cfg = ModernBertConfig(**json.load(f))
     model = ModernBertForMLM(cfg)
-    model.load_state_dict(load_file(f"{model_dir}/model.safetensors"), strict=True)
+    model.load_state_dict(load_safetensors(f"{model_dir}/model.safetensors"), strict=True)
     model.eval()
     return model
 

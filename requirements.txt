@@ -1,0 +1,21 @@
+# BERTc 的 Python 依赖。装法:
+#     uv pip install -r requirements.txt
+#
+# 两个 C++ 依赖(PieceTokenizer / Wapic)不在这里 —— 它们要 clone 加编译,
+# 由 `make -C prepare deps` 装,见 prepare/install_deps.sh。
+
+# --- 模型与训练 -------------------------------------------------------------
+# src/ 只依赖 torch。CRF、优化器、LR 调度、整词掩码、safetensors 读取都是
+# 自己实现的,所以这一节就一行。
+torch>=2.6
+
+# --- 数据获取与加工(prepare/ 和 data/ 用)---------------------------------
+numpy>=1.24              # prepare/pretokenize.py 拼接语料
+huggingface_hub>=0.23    # data/download.py 下 HF 数据集
+pyarrow>=15              # 读 parquet 语料(finewiki / FineWeb-Edu)
+pandas>=2.0              # data/process.py 读 cnn_dailymail
+
+# --- 发布(save/ 用)-------------------------------------------------------
+# 只有**写** safetensors 需要这个库;发布包里的推理代码用的是自带的
+# checkpoint.py(纯 torch),下载模型的人不需要装它。
+safetensors>=0.4

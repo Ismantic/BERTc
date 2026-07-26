@@ -48,6 +48,7 @@ def _copy(src: Path, dst_dir: Path) -> None:
 def _common_assets(out: Path, backbone_dir: Path, extra_code=()) -> None:
     """所有发布目录都要带的东西:骨干定义、tokenizer、config。"""
     _copy(SRC / "model.py", out)
+    _copy(SRC / "checkpoint.py", out)
     _copy(ASSETS / "tokenizer.py", out)
     # 词表来自 PieceTokenizer 仓库,本仓库不留副本。发布包里沿用同一个文件名,
     # 来源一目了然。mask_token_id 不单独存文件 —— 它等于词表大小,
@@ -131,6 +132,7 @@ def refresh_code(name: str, spec: dict, out_root: Path) -> Path:
                  f"已经导出过的目录")
 
     _copy(SRC / "model.py", out)
+    _copy(SRC / "checkpoint.py", out)
     _copy(ASSETS / "tokenizer.py", out)
     # 词表也刷新:文件名改过(piece.model → BERTc-Tokenizer.pt),旧包里没有
     sys.path.insert(0, str(ROOT))
