@@ -36,7 +36,8 @@ class BERTcForCSC(nn.Module):
     @classmethod
     def from_pretrained(cls, model_dir=".", map_location="cpu"):
         model_dir = Path(model_dir)
-        cfg = ModernBertConfig(**json.loads((model_dir / "config.json").read_text()))
+        cfg = ModernBertConfig.from_dict(
+            json.loads((model_dir / "config.json").read_text()))
         model = cls(cfg)
         state = load_safetensors(model_dir / "model.safetensors",
                                  device=str(map_location))

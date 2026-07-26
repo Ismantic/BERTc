@@ -103,9 +103,6 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument("--max_position", type=int, default=1024)
     p.add_argument("--pe_theta", type=float, default=10000.0)
     p.add_argument("--layer_norm_eps", type=float, default=1e-5)
-    p.add_argument("--embed_dropout", type=float, default=0.0)
-    p.add_argument("--mlp_dropout", type=float, default=0.0)
-    p.add_argument("--attn_out_dropout", type=float, default=0.0)
     # 训练
     p.add_argument("--max_seq_length", type=int, default=512)
     p.add_argument("--batch_size", type=int, default=16)
@@ -180,8 +177,6 @@ def main() -> None:
         max_position_embeddings=args.max_position,
         pad_token_id=args.pad_token_id, mask_token_id=args.mask_token_id,
         pe_theta=args.pe_theta, layer_norm_eps=args.layer_norm_eps,
-        embed_dropout=args.embed_dropout, mlp_dropout=args.mlp_dropout,
-        attn_out_dropout=args.attn_out_dropout,
     )
     model = ModernBertForMLM(cfg)
     if args.init_from_ckpt:

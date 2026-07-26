@@ -37,8 +37,7 @@ class ModernBertMT(nn.Module):
                  dropout: float = 0.1):
         super().__init__()
         bert_sd, cfg_dict = load_backbone(ckpt_dir)
-        cfg = ModernBertConfig(**{k: v for k, v in cfg_dict.items()
-                                  if k in ModernBertConfig.__dataclass_fields__})
+        cfg = ModernBertConfig.from_dict(cfg_dict)
         self.bert = ModernBertModel(cfg)
         self.bert.load_state_dict(bert_sd, strict=True)
 

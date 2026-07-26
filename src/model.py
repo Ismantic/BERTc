@@ -76,17 +76,22 @@ class ModernBertConfig:
     layer_norm_eps: float = 1e-5
     initializer_range: float = 0.02
     tie_word_embeddings: bool = True
-    # Dropout(对齐 ModernBERT release)
-    embed_dropout: float = 0.0
-    mlp_dropout: float = 0.0
-    attn_out_dropout: float = 0.1
-    attn_probs_dropout: float = 0.0
+    # 全程无 dropout:预训练数据量远大于参数量,不存在过拟合,dropout 只拖慢
+    # 收敛。所以没有 dropout 配置项 —— 已发布的 config.json 里那几个 dropout
+    # 字段都是 0,load_backbone 按字段名过滤,多出来的会被忽略。
     # 架构开关(对齐 release)
     embed_norm: bool = True            # embedding 后立刻 LayerNorm
     skip_first_prenorm: bool = True    # 第 1 层不做 pre-norm
     final_norm: bool = True            # 最后一层后 LayerNorm
     # init
     init_method: str = "megatron"      # "megatron"(残差层 ×1/sqrt(2L))或 "normal"
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "ModernBertConfig":
+        """按字段名过滤后构造。config.json 可能带这个版本不认识的键 ——
+        已发布的六个模型就带着四个 dropout 字段(现在全程无 dropout,字段去掉了),
+        直接 `ModernBertConfig(**d)` 会 TypeError。"""
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
     @property
     def head_dim(self) -> int:
@@ -143,11 +148,9 @@ class ModernBertAttention(nn.Module):
         self.num_heads = config.num_attention_heads
         self.head_dim = config.head_dim
         self.scale = self.head_dim ** -0.5
-        self.attn_probs_dropout = config.attn_probs_dropout
         # 无 bias
         self.qkv = nn.Linear(config.hidden_size, 3 * config.hidden_size, bias=False)
         self.o = nn.Linear(config.hidden_size, config.hidden_size, bias=False)
-        self.out_dropout = nn.Dropout(config.attn_out_dropout)
 
     def forward(self, x: torch.Tensor,
                 block_mask=None,
@@ -175,11 +178,10 @@ class ModernBertAttention(nn.Module):
             out = F.scaled_dot_product_attention(
                 q, k, v,
                 attn_mask=sdpa_mask,
-                dropout_p=self.attn_probs_dropout if self.training else 0.0,
                 is_causal=False,
             )  # [B, h, L, d]
         out = out.transpose(1, 2).reshape(B, L, H)
-        return self.out_dropout(self.o(out))
+        return self.o(out)
 
 
 # ============ GeGLU MLP ============
@@ -193,11 +195,10 @@ class GeGLU(nn.Module):
         I = config.intermediate_size
         self.w_in = nn.Linear(config.hidden_size, 2 * I, bias=False)
         self.w_out = nn.Linear(I, config.hidden_size, bias=False)
-        self.dropout = nn.Dropout(config.mlp_dropout)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         gate, up = self.w_in(x).chunk(2, dim=-1)
-        return self.dropout(self.w_out(F.gelu(gate) * up))
+        return self.w_out(F.gelu(gate) * up)
 
 
 # ============ Layer(pre-norm,支持 skip_first_prenorm)============
@@ -235,7 +236,6 @@ class ModernBertModel(nn.Module):
         )
         self.embed_norm = (LayerNormNoBias(config.hidden_size, eps=config.layer_norm_eps)
                            if config.embed_norm else nn.Identity())
-        self.embed_dropout = nn.Dropout(config.embed_dropout)
         self.layers = nn.ModuleList(
             [ModernBertLayer(config, is_first=(i == 0))
              for i in range(config.num_hidden_layers)]
@@ -284,7 +284,6 @@ class ModernBertModel(nn.Module):
         x = self.embed(input_ids)
         x = x + self.pos_emb(L).to(x.dtype)  # 加 scaled sinusoidal PE
         x = self.embed_norm(x)
-        x = self.embed_dropout(x)
 
         block_mask = self._build_block_mask(seg_ids, B, L) if seg_ids is not None else None
 

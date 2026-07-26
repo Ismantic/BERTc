@@ -105,7 +105,7 @@ def test_backbone(name: str) -> int:
         from model import ModernBertConfig, ModernBertForMLM
         from tokenizer import PieceCharTokenizer
 
-        cfg = ModernBertConfig(**json.load(open("config.json")))
+        cfg = ModernBertConfig.from_dict(json.load(open("config.json")))
         m = ModernBertForMLM(cfg); m.load_state_dict(load_file("model.safetensors"), strict=True); m.eval()
         tok = PieceCharTokenizer(".")
         text = "北京是中国的首都"

@@ -79,7 +79,7 @@ from safetensors.torch import load_file
 from model import ModernBertConfig, ModernBertForMLM
 from tokenizer import PieceCharTokenizer
 
-cfg = ModernBertConfig(**json.load(open("config.json")))
+cfg = ModernBertConfig.from_dict(json.load(open("config.json")))
 model = ModernBertForMLM(cfg)
 model.load_state_dict(load_file("model.safetensors"), strict=True)
 model.eval()
