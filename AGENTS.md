@@ -34,7 +34,8 @@ python -m src.pretrain --train_data ... --output_dir ...
 
 ## 环境
 
-`/home/tfbao/.venv/bin/python`,**用 `uv pip install`,没有 pip**。
+`~/.venv-e/bin/python`(Python 3.11,与 `../Summer/` `../Interpreter/` 共用),
+**用 `uv pip install`,没有 pip**。
 Makefile 走 gitignore 的 `local.mk` 指过去,别写回 Makefile。
 单张 RTX 4090,没有多卡代码路径。
 

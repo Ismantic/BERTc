@@ -54,10 +54,13 @@ python -m src.pretrain / src.finetune_mt / src.finetune_csc
 
 ## 环境
 
-- venv:`/home/tfbao/.venv/bin/python`(Python 3.14,torch 2.11+cu13)。
+- venv:`~/.venv-e`(Python 3.11,torch 2.11+cu130)。**与 `../Summer/`
+  `../Interpreter/` 共用同一个** —— 三个仓库一个环境,省一份要记的东西。
   **用 `uv pip install`,这个 venv 里没有 pip。**
+  2026-07-28 从 3.14 的 `~/.venv` 切过来:六项测试全过,SOTA 逐位复现
+  (MT 1.4712 / CSC 0.8388,差 +0.0000)。切之前先跑测试,别反过来。
   Makefile 的 `PY` 默认是 `$$VIRTUAL_ENV/bin/python` 或 `python3` —— 本机靠
-  gitignore 的 `local.mk`(`PY = /home/tfbao/.venv/bin/python`)指过去。
+  gitignore 的 `local.mk`(`PY = ~/.venv-e/bin/python`)指过去。
   **不要把这个路径写回 Makefile**,那样别的机器上就跑不了。
 - GPU:单张 RTX 4090(24GB,bf16)。**没有多卡代码路径。**
 - 两个 C++ 依赖用 `bash prepare/install_deps.sh` 装,会 clone 到 `deps/`:

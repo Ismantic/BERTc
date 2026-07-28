@@ -19,3 +19,10 @@ pandas>=2.0              # data/process.py 读 cnn_dailymail
 # 只有**写** safetensors 需要这个库;发布包里的推理代码用的是自带的
 # checkpoint.py(纯 torch),下载模型的人不需要装它。
 safetensors>=0.4
+
+# --- 测试用的对照物(可选,但强烈建议装)-------------------------------------
+# test_crf.py 和 test_optim.py 拿它们当参照做数值对拍。**不装不会报错,
+# 只会打印「未安装,跳过对拍」然后退出码 0** —— 一个跳过的测试不是测试。
+pytorch-crf>=0.7             # test_crf.py 的参照
+torch-optimi>=0.3.3          # test_optim.py 的参照(v4-Large 就是用它训的)
+transformers>=4.40           # test_optim.py 的 LR 调度参照
