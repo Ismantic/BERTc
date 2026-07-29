@@ -55,7 +55,7 @@ CWS + POS + NER (PD-1998,FGM 5 epoch):
 | MacBERT-Large | 326M | **0.9856** | 0.9629 | **0.9664** | 1.4677 |
 | RoBERTa-wwm-ext | 102M | 0.9828 | 0.9562 | 0.9629 | 1.4623 |
 
-joint = CWS F1 + 0.3 × POS 准确率 + 0.2 × NER F1。指标在 dev 前 2000 句上测
+以上 joint = CWS F1 + 0.3 × POS 准确率 + 0.2 × NER F1。指标在 dev 前 2000 句上测
 (与训练时选 best.pt 的口径一致);全量 21,143 句上是 1.4646。
 
 Correction (SIGHAN-15 官方 707 条，PyCorrector 口径):
@@ -67,27 +67,24 @@ Correction (SIGHAN-15 官方 707 条，PyCorrector 口径):
 | MacBERT-Large | 326M | 0.8309 | 0.9302 | 0.7507 |
 | BERTc-165M | 165M | 0.8333 | 0.9582 | 0.7373 |
 
-对比的基线是同一套评测代码在修正前的口径下测的,同样低估约 0.004。
-调参过程和噪声量级见 [`docs/WHY.md`](docs/WHY.md#csc-调参8-次实验测出来的)。
 
 ## 架构
 
-24L / 1024H / 2752I / 16 heads(315M),或 12L 的 165M 版。词表 12536 ——
-字级:中文一字一 piece,英文走 BPE 子词。
+24L / 1024H / 2752I / 16 Heads(315M),或 12L 的 165M 版。词表 12536 ——
+字级:中文一字一Piece,英文走 BPE 子词。
 
-- ScaledSinusoidal 位置编码(Cramming):只在嵌入层算一次,attention 里零开销
-- GeGLU 前馈、LayerNorm 无 bias、pre-norm 且首层跳过、全部 Linear 无 bias
-- 简化 MLM 头:`logits = h @ embed.weightᵀ`,没有 Dense / LN / GeLU / bias
-- Megatron 初始化(残差支路 ×1/√2L);全程无 dropout;输入输出嵌入绑定
+- ScaledSinusoidal 位置编码：只在嵌入层算一次,attention 里零开销
+- GeGLU 前馈、LayerNorm 无 Bias、Pre-Norm 且首层跳过、全部 Linear 无 Bias
+- 简化 MLM 头:`logits = h @ embed.weightᵀ`,没有 Dense / LN / GeLU / Bias
+- Megatron 初始化(残差支路 ×1/√2L);全程无 Dropout;输入输出嵌入绑定
 
 预训练:StableAdamW(β₂=0.95)+ Damped Cosine LR(8e-4 → 8e-5)+ 固定 15%
-整词掩码 + `flex_attention` 跨文档隔离。有效 batch 4096,8500 步 ≈ 17.4B token。
+整词掩码 + `FlexAttention` 跨文档隔离。有效 Batch 4096,8500 步 ≈ 17.4B token。
 
-每条选择的理由见 [`docs/WHY.md`](docs/WHY.md)。
 
 ## 代码
 
-四层,按数据流切:
+四步,按数据流切:
 
 ```
 data/       下载原始语料与标注数据,加工成统一格式   make -C data
