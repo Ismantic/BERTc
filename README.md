@@ -140,7 +140,7 @@ uv pip install -r requirements.txt
 ```
 
 `src/` 只依赖 torch;`requirements.txt` 里其余几个是 `data/` 下载加工、
-`prepare/` 预编码、`save/` 导出用的。**下载已发布模型的人一个都不需要** ——
+`prepare/` 预编码、`save/` 导出用的。而最终推理时，
 发布包只要 torch 和 PieceTokenizer。
 
 两个 C++ 依赖由 `make -C prepare deps` 自动 clone 并编译(需要 `cmake` 和
