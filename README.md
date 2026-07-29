@@ -4,7 +4,7 @@
 
 包含从下载语料到发布上 Hugging Face 的完整流程:数据获取与加工、词表与预编码、
 预训练、微调、导出发布。模型与训练代码(`src/`)只依赖 torch —— CRF、优化器、
-LR 调度、整词掩码、safetensors 读写都是自己实现的。
+LR 调度、整词掩码、safetensors 读写都不依赖外部库，方便理解。
 
 已发布六个 HF 仓库,两个规格各三个任务。
 
@@ -26,9 +26,9 @@ BERTcForCSC.from_pretrained(".").correct("他平时喜欢锻练身体")
 
 | Hugging Face | 参数 | 任务 |
 |---|---|---|
-| [`Ismantic/BERTc-315M`](https://huggingface.co/Ismantic/BERTc-315M) · [`-165M`](https://huggingface.co/Ismantic/BERTc-165M) | 315M / 165M | Backbone |
-| [`Ismantic/BERTc-315M-MT`](https://huggingface.co/Ismantic/BERTc-315M-MT) · [`-165M-MT`](https://huggingface.co/Ismantic/BERTc-165M-MT) | — | CWS + POS + NER |
-| [`Ismantic/BERTc-315M-CSC`](https://huggingface.co/Ismantic/BERTc-315M-CSC) · [`-165M-CSC`](https://huggingface.co/Ismantic/BERTc-165M-CSC) | — | Correction |
+| [`BERTc-315M`](https://huggingface.co/Ismantic/BERTc-315M) · [`-165M`](https://huggingface.co/Ismantic/BERTc-165M) | 315M / 165M | Backbone |
+| [`BERTc-315M-MT`](https://huggingface.co/Ismantic/BERTc-315M-MT) · [`-165M-MT`](https://huggingface.co/Ismantic/BERTc-165M-MT) | — | CWS + POS + NER |
+| [`BERTc-315M-CSC`](https://huggingface.co/Ismantic/BERTc-315M-CSC) · [`-165M-CSC`](https://huggingface.co/Ismantic/BERTc-165M-CSC) | — | Correction |
 
 ```bash
 huggingface-cli download Ismantic/BERTc-315M-MT --local-dir BERTc-MT
